@@ -10,8 +10,11 @@ import telegram
 from telegram.ext import Updater, CommandHandler, Filters, MessageHandler
 import xml.etree.ElementTree as ET
 
-sys.path.append('/home/pi/CatPreyAnalyzer')
-sys.path.append('/home/pi')
+path_of_script = os.path.dirname(os.path.realpath(sys.argv[0]))
+name_of_script = os.path.basename(sys.argv[0])
+home = str(Path.home())
+sys.path.append(path_of_script)
+sys.path.append(home)
 from CatPreyAnalyzer.model_stages import PC_Stage, FF_Stage, Eye_Stage, Haar_Stage, CC_MobileNet_Stage
 from CatPreyAnalyzer.camera_class import Camera
 cat_cam_py = str(Path(os.getcwd()).parents[0])
@@ -177,7 +180,7 @@ class Sequential_Cascade_Feeder():
             event_str += '\n' + f_event.img_name + ' => PC_Val: ' + str('%.2f' % f_event.pc_prey_val)
 
         sender_img = event_objects[min_prey_index].output_img
-        caption = 'Cumuli: ' + str(cumuli) + ' => Cat is clean...' + ' 🐱' + event_str
+        caption = 'Cumuli: ' + str(cumuli) + ' => Cat has no prey...' + ' 🐱' + event_str
         self.bot.send_img(img=sender_img, caption=caption)
         return
 
@@ -231,6 +234,7 @@ class Sequential_Cascade_Feeder():
             self.EVENT_FLAG = True
             self.event_nr = self.get_event_nr()
             self.event_objects.append(cascade_obj)
+            #self.bot.send_text("Cat found")
 
             #Last cat pic for bot
             self.bot.node_last_casc_img = cascade_obj.output_img
@@ -241,6 +245,8 @@ class Sequential_Cascade_Feeder():
                 self.face_counter += 1
                 self.cumulus_points += (50 - int(round(100 * cascade_obj.pc_prey_val)))
                 self.FACE_FOUND_FLAG = True
+                self.bot.send_text("Cat face found")
+                self.bot.sendCascImage()
 
             print('CUMULUS:', self.cumulus_points)
             self.queues_cumuli_in_event.append((len(self.main_deque),self.cumulus_points, done_timestamp))
@@ -298,6 +304,7 @@ class Sequential_Cascade_Feeder():
         start_time = time.time()
         target_img_name = 'dummy_img.jpg'
         target_img = cv2.imread(os.path.join(cat_cam_py, 'CatPreyAnalyzer/readme_images/lenna_casc_Node1_001557_02_2020_05_24_09-49-35.jpg'))
+        #cv2.imwrite(os.path.join(cat_cam_py,'test.jpg'),target_img)
         cascade_obj = self.feed(target_img=target_img, img_name=target_img_name)[1]
         print('Runtime:', time.time() - start_time)
         return cascade_obj
@@ -317,7 +324,7 @@ class Sequential_Cascade_Feeder():
                 # Clean up garbage
                 gc.collect()
                 print('DELETING QUEQUE BECAUSE OVERLOADED!')
-                self.bot.send_text(message='Running Hot... had to kill Queque!')
+                self.bot.send_text(message='Too many images to process ... had to kill Queue!')
 
             elif len(self.main_deque) > self.DEFAULT_FPS_OFFSET:
                 self.queque_worker()
@@ -333,6 +340,10 @@ class Sequential_Cascade_Feeder():
                 self.bot.send_text('Ok door is open for ' + str(open_time) + 's...')
                 time.sleep(open_time)
                 self.bot.send_text('Door locked again, back to business...')
+            # check if we should export a live image
+            if (last_run_time+10 < current_time):
+                last_run_time=current_time
+                self.bot.sendLiveImage()
 
     def dummy_queque_handler(self):
         # Do this to force run all networks s.t. the network inference time stabilizes
@@ -346,7 +357,7 @@ class Sequential_Cascade_Feeder():
             if len(self.main_deque) > self.QUEQUE_MAX_THRESHOLD:
                 self.main_deque.clear()
                 print('DELETING QUEQUE BECAUSE OVERLOADED!')
-                self.bot.send_text(message='Running Hot... had to kill Queque!')
+                self.bot.send_text(message='Too many images to process ... had to kill Queue!')
 
             elif len(self.main_deque) > self.DEFAULT_FPS_OFFSET:
                 self.queque_worker()
@@ -436,10 +447,13 @@ class Cascade:
         if cat_bool and bbs_target_img.size != 0:
             print('Cat Detected!')
             rec_img = self.cc_mobile_stage.draw_rectangle(img=original_copy_img, box=pred_cc_bb_full, color=(255, 0, 0), text='CC_Pred')
-
+            height, width = rec_img.shape[:2]
+            height, width = bbs_target_img.shape[:2]
+            height, width = cc_target_img.shape[:2]
             #Do HAAR
             haar_snout_crop, haar_bbs, haar_inference_time, haar_found_bool = self.do_haar_stage(target_img=bbs_target_img, pred_cc_bb_full=pred_cc_bb_full, cc_target_img=cc_target_img)
             rec_img = self.cc_mobile_stage.draw_rectangle(img=rec_img, box=haar_bbs, color=(0, 255, 255), text='HAAR_Pred')
+            height, width = rec_img.shape[:2]
 
             event_img_object.haar_pred_bb = haar_bbs
             event_img_object.haar_inference_time = haar_inference_time
@@ -631,7 +645,7 @@ class NodeBot():
         self.last_msg_id = 0
         self.bot_updater = Updater(token=self.BOT_TOKEN)
         self.bot_dispatcher = self.bot_updater.dispatcher
-        self.commands = ['/help', '/nodestatus', '/sendlivepic', '/sendlastcascpic', '/letin', '/reboot']
+        self.commands = ['/help', '/nodestatus', '/sendlivepic', '/sendlastdetectpic', '/letin', '/reboot']
 
         self.node_live_img = None
         self.node_queue_info = None
@@ -652,7 +666,7 @@ class NodeBot():
         self.bot_dispatcher.add_handler(node_status_handler)
         send_pic_handler = CommandHandler('sendlivepic', self.bot_send_live_pic)
         self.bot_dispatcher.add_handler(send_pic_handler)
-        send_last_casc_pic = CommandHandler('sendlastcascpic', self.bot_send_last_casc_pic)
+        send_last_casc_pic = CommandHandler('sendlastdetectpic', self.bot_send_last_casc_pic)
         self.bot_dispatcher.add_handler(send_last_casc_pic)
         letin = CommandHandler('letin', self.node_let_in)
         self.bot_dispatcher.add_handler(letin)
@@ -663,7 +677,7 @@ class NodeBot():
         self.bot_updater.start_polling()
 
     def bot_help_cmd(self, bot, update):
-        bot_message = 'Following commands supported:'
+        bot_message = 'The following commands supported:'
         for command in self.commands:
             bot_message += '\n ' + command
         self.send_text(bot_message)
@@ -685,7 +699,7 @@ class NodeBot():
             caption = 'Last Cascade!'
             self.send_img(self.node_last_casc_img, caption)
         else:
-            self.send_text('No casc img available yet...')
+            self.send_text('Detection did not happen yet...')
 
     def bot_send_live_pic(self, bot, update):
         if self.node_live_img is not None:
@@ -693,8 +707,7 @@ class NodeBot():
             caption = 'Here ya go...'
             self.send_img(self.node_live_img, caption)
         else:
-            self.send_text('No img available yet...')
-
+            self.send_text('No image available yet...')
     def bot_send_status(self, bot, update):
         if self.node_queue_info is not None and self.node_over_head_info is not None:
             bot_message = 'Queue length: ' + str(self.node_queue_info) + '\nOverhead: ' + str(self.node_over_head_info) + 's'
