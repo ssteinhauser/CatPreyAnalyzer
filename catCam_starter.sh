@@ -1,7 +1,23 @@
 #!/usr/bin/env bash
 
+# Telegram Bot info, edit for your bot
+CHAT_ID="XXXXXXXXX"
+BOT_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
 echo "Executing CatPreyAnalyzer"
 # Tensorflow Stuff
-export PYTHONPATH=$PYTHONPATH:/home/pi/tensorflow/models/research:/home/pi/tensorflow/models/research/slim:/home/pi/.local/lib/python3.7/site-packages
-cd /home/pi/CatPreyAnalyzer
-python3 cascade.py
+PYTHONVERSION=$(ls -la `which python3`|awk -F '->' '{print $2}'|sed -e 's/^[[:space:]]*//')
+export PYTHONPATH=$PYTHONPATH:$HOME/tensorflow/models/research:$HOME/tensorflow/models/research/slim:/usr/local/lib/$PYTHONVERSION/site-packages
+
+export CHAT_ID
+export BOT_TOKEN
+export FIREBASE_BUCKET
+cd $HOME/CatPreyAnalyzer
+rm -f last_casc_img_*.jpg
+rm -f live_img_*.jpg
+# start software repeatedly, in case it crashes
+while :; do
+  python3 -u cascade.py
+  echo "cascade software ended - restarting"
+  sleep 2
+done
