@@ -3,6 +3,8 @@
 # Telegram Bot info, edit for your bot
 CHAT_ID="XXXXXXXXX"
 BOT_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+# Firebase info, edit to match your setup
+FIREBASE_BUCKET=""
 
 echo "Executing CatPreyAnalyzer"
 # Tensorflow Stuff

@@ -9,6 +9,11 @@ from multiprocessing import Process
 import telegram
 from telegram.ext import Updater, CommandHandler, Filters, MessageHandler
 import xml.etree.ElementTree as ET
+# for firebase messaging
+from email.quoprimime import body_decode
+import firebase_admin
+from firebase_admin import credentials, messaging, storage
+
 #for logging
 import logging.handlers
 
@@ -199,6 +204,7 @@ class Sequential_Cascade_Feeder():
         sender_img = event_objects[min_prey_index].output_img
         caption = 'Cumuli: ' + str(cumuli) + ' => Cat has no prey...' + ' 🐱' + event_str
         self.bot.send_img(img=sender_img, caption=caption)
+        self.bot.sendPushNotification("Cat without prey detected", caption,sender_img,"0")
         return
 
     def send_dk_message(self, event_objects, cumuli):
@@ -691,6 +697,11 @@ class NodeBot():
         # Get environment variables for accessing Telegram API
         self.CHAT_ID= os.getenv('CHAT_ID')
         self.BOT_TOKEN = os.getenv('BOT_TOKEN')
+        # Data for firebase messaging
+        self.cred = credentials.Certificate("./firebasekey.json")
+        self.storageBucket = os.getenv('FIREBASE_BUCKET')
+        self.livePrefix='live_img_'
+        self.cascPrefix='last_casc_img_'
 
 
         self.last_msg_id = 0
@@ -705,8 +716,26 @@ class NodeBot():
         self.node_over_head_info = None
         self.node_let_in_flag = None
 
+        #Init firebase
+        self.init_firebase_messaging()
         #Init the listener
         self.init_bot_listener()
+    def init_firebase_messaging(self):
+        # initialize firebase messaging
+
+        firebase_admin.initialize_app(self.cred, {'storageBucket': self.storageBucket})
+        self.bucket = storage.bucket()
+        # delete old images from firebase storage
+        log.info('Deleting old images from firebase storage')
+        blobs = self.bucket.list_blobs(prefix=self.cascPrefix)
+        for blob in blobs:
+            try:
+                log.info(blob)
+                blob.delete()
+            except Exception as e:
+                log.info('failed to delete '+blob)
+                log.info(e)
+
 
     def init_bot_listener(self):
         telegram.Bot(token=self.BOT_TOKEN).send_message(chat_id=self.CHAT_ID, text='Good Morning, CatCam is online!' + '🤙')
@@ -797,6 +826,130 @@ class NodeBot():
         except TelegramError as e:
             log.info('failed to send image to telegram bot:')
             log.info(e)
+
+    # upload image to firebase storage bucket
+    def uploadImage(self, imagefile):
+        blob=self.bucket.blob(imagefile)
+        returnUrl=""
+        if (os.path.isfile(imagefile)):
+            try:
+                blob.upload_from_filename(imagefile)
+                blob.make_public()
+                returnUrl = blob.public_url
+            except Exception as e:
+                log.info('failed to upload image:')
+                log.info(e)
+        else:
+            log.info('image file for upload to firebase not accessible? '+imagefile)
+        return returnUrl
+
+    # send firebase push notification
+    def sendPushNotification(self, title, body, imageSource, topic):
+        topicAsString = ""
+        imgUrl= self.uploadImage(imageSource)
+
+        if (int(topic) == 0):
+            log.info("Topic is alert")
+            topicAsString = "alert"
+            message = messaging.Message(
+                {"ImageURL": imgUrl,
+                 "Type" : topicAsString},
+                notification=messaging.Notification(
+                    title=title,
+                    body=body,
+                    image=imgUrl
+                ),
+                topic=topicAsString,
+                android=messaging.AndroidConfig(
+                    notification=messaging.AndroidNotification(
+                        channel_id="alert"
+                    )
+                )
+            )
+            log.info("Sending message")
+            try:
+                returnString = messaging.send(message)
+            except Exception as e:
+                log.info('failed to send message:')
+                log.info(e)
+            log.info(returnString)
+        elif (int(topic) == 1):
+            log.info("Topic is update")
+            topicAsString = "update"
+            message = messaging.Message(
+                {"ImageURL": imgUrl,
+                 "Type" : topicAsString},
+                notification=messaging.Notification(
+                    title=title,
+                    body=body,
+                    image=imgUrl
+                ),
+                topic=topicAsString,
+                android=messaging.AndroidConfig(
+                    notification=messaging.AndroidNotification(
+                        channel_id="update"
+                    )
+                )
+            )
+            try:
+                returnString = messaging.send(message)
+            except Exception as e:
+                log.info('failed to send message:')
+                log.info(e)
+            log.info(returnString)
+    def sendCascImage(self):
+        font=cv2.FONT_HERSHEY_SIMPLEX
+        timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y, %H:%M:%S")
+        last_casc_img=cv2.putText(
+           img = self.node_last_casc_img,
+           text = timestamp_string,
+           org = (10, 40),
+           fontFace = font,
+           fontScale = 1.0,
+           color = (0, 200, 0),
+           thickness = 3
+        )
+
+        last_casc_filename=self.cascPrefix+timestamp_string+'.jpg'
+        try:
+            my_resul = cv2.imwrite(last_casc_filename,self.node_last_casc_img)
+        except cv2.error as e:
+            log.info("writing last cascade image failed:")
+            log.info(e)
+            return
+        self.sendPushNotification("Latest detection result", "detection result", last_casc_filename, "0")
+
+    def sendLiveImage(self):
+        log.info("checking for firebase file")
+
+        blob=self.bucket.blob('settings.txt')
+        try:
+            blob_exists=blob.exists()
+        except Exception as e:
+            log.info('checking for settings.txt failed:')
+            log.info(e)
+            return
+        if (blob_exists):
+            log.info("File exists, we should send image")
+            timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y-%H:%M:%S")
+
+            live_filename=self.livePrefix+timestamp_string+'.jpg'
+            try:
+                # delete old images from firebase storage
+                log.info('Deleting old images from firebase storage')
+                oldblobs = self.bucket.list_blobs(prefix=self.livePrefix)
+                for oldblob in oldblobs:
+                    log.info(oldblob)
+                    oldblob.delete()
+                # write live file
+                cv2.imwrite(live_filename, self.node_live_img)
+                # send it
+                self.sendPushNotification("current image","current image",live_filename,"1")
+                blob.delete()
+            except cv2.error as e:
+               log.info("writing live img failed:")
+               log.info(e)
+
 class DummyDQueque():
     def __init__(self):
         self.target_img = cv2.imread(os.path.join(cat_cam_py, 'CatPreyAnalyzer/readme_images/lenna_casc_Node1_001557_02_2020_05_24_09-49-35.jpg'))
