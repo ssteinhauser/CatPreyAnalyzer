@@ -40,12 +40,113 @@ The code is meant to run on a RPI4 with the [IR JoyIt Camera](https://joy-it.net
   
   The system is now running and you can check out the bot commands via ```/help```. Be aware that you need patience at startup, as the models take up to 5 min to be   completely loaded, as they are very large.
   
+# Modifications for running the code on a Rock 3a
+If you don't use a Raspberry Pi, but an alternative such as the [Radxa Rock 3a](https://wiki.radxa.com/Rock3/3a), then a few modifications must be made.
+
+### Prerequisites
+  
+- software: the code was tested on [Debian Bullseye](https://wiki.radxa.com/Rock3/Debian) for the Rock 3a. Download a suitable Debian image [here](https://github.com/radxa-build/rock-3a/releases/latest)).
+  
+- hardware: the Raspberry Pi camera (v1) can be made to work with the Rock 3a on Linux kernel version 4.19.193 (the default kernel shipped with the Debian image mentioned above) by enabling a [device tree overlay](https://wiki.radxa.com/Device-tree-overlays). On a default Debian install, the device tree overlay for the camera must be activated by editing ```/boot/config.txt```:
+  ```
+  sudo nano /boot/config.txt
+  ```
+  Add the following line (at the end)
+  ```
+  dtoverlay=rock-3ab-rpi-camera-v1p3-ov5647
+  ```
+  
+  Save and exit ```nano``` (```CTRL-X```) and run
+  
+  ```
+  sudo update_extlinux.sh
+  ```
+  
+  Reboot.
+  
+  To test the camera from the command line, install the ```v4l2-utils``` and ```ffmpeg``` packages:
+  ```
+  sudo apt install v4l2-utils ffmpeg
+  ```
+  and run a command like this:
+  ```
+  v4l2-ctl --device /dev/video0 --stream-mmap=3 --stream-count=1 \
+  --stream-skip=10 --stream-to=1920x1080.nv12 \
+  --set-fmt-video=width=1920,height=1080,pixelformat=NV12 \
+  && ffmpeg -y -f rawvideo -s 1920x1080 -pix_fmt nv12 -i \
+  1920x1080.nv12  -pix_fmt rgb24 1920x1080.nv12.png
+  ```
+  This will record an image (```1920x1080.nv12.png```). Use your favorite image viewer to display this file. The file ```1920x1080.nv12``` should contain a really short video. The video can be viewed using commands like
+  ```
+  vlc --demux rawvideo --rawvid-fps 25 --rawvid-width 1920 --rawvid-height 1080 --rawvid-chroma I420 1920x1080.nv12
+  ```
+  or
+  ```
+  mplayer -demuxer rawvideo -rawvideo w=1920:h=1080:format=nv12 1920x1080.nv12
+  ```
+- Follow the instructions for installing opencv, python3 packages and tensorflow as laid out above (see [EdjeElectronics Repositoy](https://github.com/EdjeElectronics/TensorFlow-Object-Detection-on-the-Raspberry-Pi)), with one major modification: ```python-opencv``` should be installed via package manager, not via pip3:
+  ```
+  sudo apt install python3-opencv 
+  ```
+  Additionally, some required packages and modules mentioned in EdjeElectronics Repository are not available in Debian Bullseye (```libjasper-dev```) or have a different name or version (```libpng12-dev``` -> ```libpng-dev```), but the installation works when using the following commands
+  ```
+  sudo apt install cython3
+  sudo apt install python-tk
+  sudo apt install libjpeg-dev libtiff5-dev libpng-dev
+  sudo apt install libavcodec-dev libavformat-dev
+  sudo apt install libswscale-dev libv4l-dev
+  sudo apt install libxvidcore-dev libx264-dev
+  sudo apt install libatlas-base-dev
+  sudo apt install python3-python-telegram-bot python3-tz
+  sudo apt install protobuf-compiler python3-pil python3-lxml
+  
+  sudo pip3 install tensorflow tensorflow-io
+  sudo pip3 install pillow lxml jupyter matplotlib
+  ```
+  (omitting ```libjasper-dev``` and using ```libpng-dev``` instead of ```libpng12-dev```, and using the distribution-specific version of ```cython```, matching the python version.).
+  
+###  Modifications to the code
+  
+  - the script for starting the code (```catCam_starter.sh```) was slightly modified to be more device-independent (different ```PYTHONPATH``` and  ```HOME``` locations).
+  - Telegram bot info should be entered in ```catCam_starter.sh``` in two environment variables:
+    ```
+    CHAT_ID="XXXXXXXXX"
+    BOT_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    ```
+    the Python3 code reads the info from these variables.
+  - the Python3 ```picamera``` library is not available on Debian for the Rock 3a, so  ```camera_class.py``` was rewritten to access the camera via the ```V4L2``` backend of ```opencv```. The code for capturing images (frames) in Python3 using ```opencv/V4L2``` is essentially like this:
+    ```
+    import cv2 as cv
+    cap = cv.VideoCapture(0)
+    cap.read(0) # helps to initialize the camera
+    cap.read(0) # helps to initialize the camera
+    ret, frame = cap.read()
+    print("Frame actual is {}x{}".format(str(frame.shape[1]), \
+    str(frame.shape[0])))
+    cv.imwrite("test.png", frame)
+    cap.release()
+    ```
+    (check ```test.png``` for a captured frame)
+  
+# Firebase messaging
+The original project uses telegram as a means of interaction with the software. There are other means of sending messages, which can be much more convenient. For instance, if you plan to use your smartphone, which alerts you of any cat approaching your camera, you could create an app for that. This can be much more custmizable than receiving telegram messages. One option for sending messages to smartphone apps is [Google Firebase Messaging](https://firebase.google.com/docs/cloud-messaging).
+There is a python implementation that allows for integrating Firebase Messaging:
+   ```
+    import firebase_admin
+    from firebase_admin import credentials, messaging, storage
+   ```
+Setting up Firebase is described [here](https://medium.com/@abdelhedihlel/upload-files-to-firebase-storage-using-python-782213060064). In essence, you need a credentials file (JSON) and the name of the storage bucket. The storage bucket must be created during the Firebase setup. The credentials file can be downloaded from Google Firebase. It should be named ```firebasekey.json``` and placed in the same directory as the ```cascade.py``` python code. The storage bucket name should be defined in ```catCam_starter.sh``` in an environment variable:
+    ```
+    FIREBASE_BUCKET="xxxxx.xxxx.xxx"
+    ```
+Of course, you would need to write a smartphone app which receives messages via Firebase.
+If you don't want to use firebase messaging, comment all lines which contain the method ```sendPushNotification``` and the call to the initialization (```init_firebase_messaging```)
 # A word of caution
-This project uses deeplearning! Contrary to popular belief DL is **not** black magic (altough close to 😎)! The network perceives image data differently than us humans. It "sees" more abstractly than us. This means a cat in the image lives as an abstract blob deep within the layers of the network. Thus there are going to be instances where the system will produce absurdly wrong statements such as:
+This project uses deep learning (DL)! Contrary to popular belief DL is **not** black magic (altough close to 😎)! The network perceives image data differently than us humans. It "sees" more abstractly than us. This means a cat in the image lives as an abstract blob deep within the layers of the network. Thus there are going to be instances where the system will produce absurdly wrong statements such as:
 
  <img src="/readme_images/bot_fail.png" width="400">
  
-  This can happen and the reason why is maths... so you have to be aware of it. If this fascinates you as much as it does me and you want a deeper understanding, check out [the deeplearning book](http://www.deeplearningbook.org/)!
+  This can happen and the reason why is maths... so you have to be aware of it. If this fascinates you as much as it does me and you want a deeper understanding, check out [the deep learning book](http://www.deeplearningbook.org/)!
  
 Further this project is based on transfer learning and has had a **very** small training set of only 150 prey images, sampled from the internet and a custom data-gathering network (more info in ```/readme_images/Semesterthesis_Smart_Catflap.pdf```). It works amazingly well *for this small amount of Data*, yet you will realize that there are still a lot of false positives. I am working on a way that we could all collaborate and upload the prey images of our cats, such that we can further train the models and result in a **much** stronger classifier. 
 
@@ -59,7 +160,7 @@ This project utilises a cascade of Convolutional Neural Networks (CNN) to proces
 
 - First detect if there is a cat or not. There exists a lot of data on this problem and a lot of complete solutions such for example any COCO trained Object detector such as for example [Tensorflows COCO trained MobileNetV2](https://github.com/tensorflow/models/blob/master/research/deeplab/g3doc/model_zoo.md). We call it the CatFinder stage which utilises the mentioned Tensorflow object detection API and runs the Tensorflow pretrained MobileNetV2 and soley aims to detect a cat in the image.
 
-- Second we detect the snout of the cat within the image section of the first stage. This is done combination of different Computer Vision (CV) techniques such as HAAR-Cascade and a self trained CNN (CNN-BB + FF).
+- Second we detect the snout of the cat within the image section of the first stage. This is done by a combination of different Computer Vision (CV) techniques such as a HAAR-Cascade and a self trained CNN (CNN-BB + FF).
 
 - Lastly we classify the snout-cropped image of the cat with a self trained CNN based on the VGG16 architecture. It was only trained with ~150 Prey-Snout-Images gathered from the internet and personal images. This is the data-critical section; we can find more than enough images of cats but only very few images of cats with prey in their snout. Obviously the tasks complexity of identifying prey in a cropped image of the snout is simpler than classifying so on a full image, hence the extra steps of the cascade.
 
@@ -80,12 +181,12 @@ Now the runtime numbers are quite high, which is why we use a dynamically adapti
 
 <img src="/readme_images/queue.png" width="400">
 
-### Cummuli Points ###
+### Cumuli Points ###
 As we are evaluating over multiple images that shall make up an event, we must have the policy, We chose: *A cat must prove that it has no prey*. The cat has to accumulate trust-points. The more points the more we trust our classification, as our threshold value is 0.5 (1: Prey, 0: No_Prey) points above 0.5 count negatively and points below 0.5 count positively towards the trust-points aka cummuli-points. 
 
 <img src="/readme_images/cummuli_approach.png" width="400">
 
-As is revealed in the Results section, we chose a cummuli-treshold of 2.93. Meaning that we classify the cat to have proven that it has no prey as soon as it reaches 2.93 cummuli-points.
+As is revealed in the Results section, we chose a cumuli-treshold of 2.93. Meaning that we classify the cat to have proven that it has no prey as soon as it reaches 2.93 cumuli-points.
 
 
 # Results
