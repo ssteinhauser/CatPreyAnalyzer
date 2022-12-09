@@ -88,7 +88,7 @@ class Spec_Event_Handler():
 class Sequential_Cascade_Feeder():
     def __init__(self):
         self.log_dir = os.path.join(os.getcwd(), 'log')
-        log.info('Log Dir:', self.log_dir)
+        log.info('Log Dir:' + self.log_dir)
         self.event_nr = 0
         self.base_cascade = Cascade()
         self.DEFAULT_FPS_OFFSET = 2
@@ -350,7 +350,7 @@ class Sequential_Cascade_Feeder():
                 self.reset_cumuli_et_al()
                 # Clean up garbage
                 gc.collect()
-                log.info('DELETING QUEQUE BECAUSE OVERLOADED!')
+                log.info('DELETING QUEQUE BECAUSE IT IS OVERLOADED!')
                 self.bot.send_text(message='Too many images to process ... had to kill Queue!')
 
             elif len(self.main_deque) > self.DEFAULT_FPS_OFFSET:
@@ -384,7 +384,7 @@ class Sequential_Cascade_Feeder():
         while(True):
             if len(self.main_deque) > self.QUEQUE_MAX_THRESHOLD:
                 self.main_deque.clear()
-                log.info('DELETING QUEUE BECAUSE OVERLOADED!')
+                log.info('DELETING QUEUE BECAUSE IT IS OVERLOADED!')
                 self.bot.send_text(message='Too many images to process ... had to kill Queue!')
 
             elif len(self.main_deque) > self.DEFAULT_FPS_OFFSET:
@@ -688,9 +688,10 @@ class Cascade:
 
 class NodeBot():
     def __init__(self):
-        #Insert Chat ID and Bot Token according to Telegram API
-        #self.CHAT_ID = 'xxxxxxxxxxxxx'
-        #self.BOT_TOKEN = 'xxxxxxxxxxxxx'
+        # Get environment variables for accessing Telegram API
+        self.CHAT_ID= os.getenv('CHAT_ID')
+        self.BOT_TOKEN = os.getenv('BOT_TOKEN')
+
 
         self.last_msg_id = 0
         self.bot_updater = Updater(token=self.BOT_TOKEN)
