@@ -25,8 +25,16 @@ try:
    from gpiozero import CPUTemperature
    raspicam=True
 except ModuleNotFoundError:
-   print("raspicam modules not found, assuming v4l2 camera")
    raspicam=False
+
+if raspicam==False:
+   try:
+      from picamera2 import Picamera2
+      raspicam2=True
+
+   except ModuleNotFoundError:
+      raspicam2=False
+      print("raspicam modules not found, assuming v4l2 camera")
 
 
 from collections import deque
@@ -50,6 +58,13 @@ class Camera:
         time.sleep(2)
 
     def fill_queue(self, deque):
+        if raspicam2:
+            picam2 = Picamera2()
+            config = picam2.create_still_configuration()
+            picam2.configure(config)
+            picam2.set_controls({"AwbEnable": 1,"ColourGains": (0.8, 1)})
+            picam2.start()
+
         while(1):
             gc.collect()
             if raspicam:
@@ -74,6 +89,32 @@ class Camera:
                         del camera
                         break
 
+            elif raspicam2:
+
+#                picam2.start()
+
+                log.info("capturing 60 frames")
+                for i in range(61):
+                    frame = picam2.capture_array()
+                    time.sleep(0.3)
+                    #print("frame read")
+                    log.info("appending frame:")
+                    datestr=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
+                    deque.append(
+                        (datestr, frame))
+                    #deque.pop()
+                    log.info("Added "+str(i)+". Quelength: " + str(len(deque)))
+                try:
+                    log.info("writing test image")
+                    color = (127, 127, 255)
+                    rec_img = self.input_text(img=frame, text=datestr, text_pos=(15, 100), color=color)
+                    cv.imwrite(path_of_script+"/test.jpg", rec_img)
+                except cv.error as e:
+                    log.info("writing test frame from camera thread failed.")
+
+#                picam2.stop()
+#                del picam2
+#                time.sleep(0.5)
             else:
                 cap=cv.VideoCapture(0)
                 #Set the resolution
@@ -84,7 +125,7 @@ class Camera:
                 #time.sleep(0.001)
                 cap.read(0)
                 log.info("capturing 60 frames")
-                for i in range(59):
+                for i in range(61):
                     ret, frame = cap.read()
                     time.sleep(0.3)
                     #print("frame read")
@@ -103,3 +144,17 @@ class Camera:
                 del cap
                 log.info("reset capture device, starting over")
         log.info("Should not reach this point in camera thread??")
+
+
+    def input_text(self, img, text, text_pos, color):
+        font = cv.FONT_HERSHEY_SIMPLEX
+        fontScale = 2
+        lineType = 3 
+
+        cv.putText(img, text,
+                    text_pos,
+                    font, 
+                    fontScale,
+                    color,
+                    lineType)
+        return img
