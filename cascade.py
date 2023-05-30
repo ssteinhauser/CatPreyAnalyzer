@@ -14,7 +14,7 @@ from email.quoprimime import body_decode
 import firebase_admin
 from firebase_admin import credentials, messaging, storage
 
-#for logging
+# for logging
 import logging.handlers
 
 path_of_script = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -39,6 +39,7 @@ handler.setFormatter(formatter)
 log = logging.getLogger(name_of_script)
 log.addHandler(handler)
 log.setLevel(LOGGING_LEVEL)
+
 
 class Spec_Event_Handler():
     def __init__(self):
@@ -93,10 +94,10 @@ class Spec_Event_Handler():
 class Sequential_Cascade_Feeder():
     def __init__(self):
         self.log_dir = os.path.join(os.getcwd(), 'log')
-        log.info('Log Dir:' + self.log_dir)
+        log.info('Log Dir:'+ self.log_dir)
         self.event_nr = 0
         self.base_cascade = Cascade()
-        self.DEFAULT_FPS_OFFSET = 2
+        self.DEFAULT_FPS_OFFSET = 1
         self.QUEQUE_MAX_THRESHOLD = 30
         self.fps_offset = self.DEFAULT_FPS_OFFSET
         self.MAX_PROCESSES = 5
@@ -117,6 +118,7 @@ class Sequential_Cascade_Feeder():
         self.queues_cumuli_in_event = []
         self.bot = NodeBot()
         self.bot.sendPushNotification('catCam start','catCam AI software was restarted','','0')
+
         self.processing_pool = []
         #log.info("deque")
         self.main_deque = deque()
@@ -217,15 +219,13 @@ class Sequential_Cascade_Feeder():
             log.info('PC_Val:'+ str('%.2f' % f_event.pc_prey_val))
             log.info('****************')
             event_str += '\n' + f_event.img_name + ' => PC_Val: ' + str('%.2f' % f_event.pc_prey_val)
-
         try:
             sender_img = face_events[0].output_img
-            caption = 'Cumuli: ' + str(cumuli) + " => Can't say for sure..." + ' 🤷♀️' + event_str + '\nMaybe use /letin?'
+            caption = 'Cumuli: ' + str(cumuli) + " => Can't say for sure..." + ' 🤷‍♀️' + event_str + '\nMaybe use /letin?'
             self.bot.send_img(img=sender_img, caption=caption)
         except Exception as e:
             log.info('Failed to extract sender_img in send_dk_message:')
             log.info(e)
-
         return
 
     def get_event_nr(self):
@@ -341,7 +341,6 @@ class Sequential_Cascade_Feeder():
     def queque_handler(self):
         # Do this to force run all networks s.t. the network inference time stabilizes
         self.single_debug()
-
         log.info("initializing camera")
         camera = Camera()
         log.info("starting camera thread")
@@ -357,7 +356,7 @@ class Sequential_Cascade_Feeder():
                 self.reset_cumuli_et_al()
                 # Clean up garbage
                 gc.collect()
-                log.info('DELETING QUEQUE BECAUSE IT IS OVERLOADED!')
+                log.info('DELETING QUEUE BECAUSE IT IS OVERLOADED!')
                 self.bot.send_text(message='Too many images to process ... had to kill Queue!')
 
             elif len(self.main_deque) > self.DEFAULT_FPS_OFFSET:
@@ -400,7 +399,7 @@ class Sequential_Cascade_Feeder():
         while(True):
             if len(self.main_deque) > self.QUEQUE_MAX_THRESHOLD:
                 self.main_deque.clear()
-                log.info('DELETING QUEUE BECAUSE IT IS OVERLOADED!')
+                log.info('DELETING QUEUE BECAUSE IS IS OVERLOADED!')
                 self.bot.send_text(message='Too many images to process ... had to kill Queue!')
 
             elif len(self.main_deque) > self.DEFAULT_FPS_OFFSET:
@@ -479,7 +478,7 @@ class Cascade:
         log.info('img_name:'+event_img_object.img_name)
         cc_target_img = event_img_object.cc_target_img
         original_copy_img = cc_target_img.copy()
-
+        #cv2.imwrite(os.path.join(cat_cam_py,'test.jpg'),original_copy_img)
         #Do CC
         start_time = time.time()
         dk_bool, cat_bool, bbs_target_img, pred_cc_bb_full, cc_inference_time = self.do_cc_mobile_stage(cc_target_img=cc_target_img)
@@ -492,7 +491,7 @@ class Cascade:
         if cat_bool and bbs_target_img.size != 0:
             log.info('Cat Detected!')
             rec_img = self.cc_mobile_stage.draw_rectangle(img=original_copy_img, box=pred_cc_bb_full, color=(255, 0, 0), text='CC_Pred')
-             #log.info('writing test.jpg: rec_img cat detected')
+            #log.info('writing test.jpg: rec_img cat detected')
             height, width = rec_img.shape[:2]
             #log.info("rec_img Size "+ str(width)+ "x"+str(height))
             height, width = bbs_target_img.shape[:2]
@@ -505,13 +504,11 @@ class Cascade:
                 log.info("writing rec_img.jpg failed")
             #my_resul = cv2.imwrite('bbs_target_img.jpg',bbs_target_img)
             #my_resul = cv2.imwrite('cc_target_img.jpg',cc_target_img)
-
             #Do HAAR
             haar_snout_crop, haar_bbs, haar_inference_time, haar_found_bool = self.do_haar_stage(target_img=bbs_target_img, pred_cc_bb_full=pred_cc_bb_full, cc_target_img=cc_target_img)
             rec_img = self.cc_mobile_stage.draw_rectangle(img=rec_img, box=haar_bbs, color=(0, 255, 255), text='HAAR_Pred')
             #log.info('writing test.jpg: rec_img haar')
             #my_resul = cv2.imwrite('rec_img_haar.jpg',rec_img)
-
             height, width = rec_img.shape[:2]
             #log.info("rec_img Size"+str(width)+"x"+str(height))
 
@@ -546,14 +543,16 @@ class Cascade:
             event_img_object.face_box = inf_bb
 
             if face_bool:
+                #log.info('writing test.jpg: rec_img')
+                #my_resul = cv2.imwrite('/home/rock/test.jpg',rec_img)
                 rec_img = self.cc_mobile_stage.draw_rectangle(img=rec_img, box=inf_bb, color=(255, 255, 255), text='INF_Pred')
                 log.info('Face Detected!')
+                #
 
                 #Do PC
                 pred_class, pred_val, inference_time = self.do_pc_stage(pc_target_img=snout_crop)
                 log.info('Prey Prediction: ' + str(pred_class))
                 log.info('Pred_Val: ' + str('%.2f' % pred_val))
-
                 pc_str = ' PC_Pred: ' + str(pred_class) + ' @ ' + str('%.2f' % pred_val)
                 color = (0, 0, 255) if pred_class else (0, 255, 0)
                 rec_img = self.input_text(img=rec_img, text=pc_str, text_pos=(15, 100), color=color)
@@ -562,7 +561,6 @@ class Cascade:
                 except cv2.error as e:
                      log.info('writing preyprediction.jpg failed:')
                      log.info(e)
-
                 event_img_object.pc_prey_class = pred_class
                 event_img_object.pc_prey_val = pred_val
                 event_img_object.pc_inference_time = inference_time
@@ -576,6 +574,9 @@ class Cascade:
             log.info('No Cat Found...')
             rec_img = self.input_text(img=original_copy_img, text='CC_Pred: NoCat', text_pos=(15, 100), color=(255, 255, 0))
 
+        #log.info('writing test.jpg')
+        #my_resul = cv2.imwrite('/home/rock/test.jpg',rec_img)
+        #log.info(my_resul)
         #Always save rec_img in event_img object
         event_img_object.output_img = rec_img
         return event_img_object
@@ -707,6 +708,7 @@ class NodeBot():
         # Get environment variables for accessing Telegram API
         self.CHAT_ID= os.getenv('CHAT_ID')
         self.BOT_TOKEN = os.getenv('BOT_TOKEN')
+
         # Data for firebase messaging
         self.cred = credentials.Certificate("./firebasekey.json")
         self.storageBucket = os.getenv('FIREBASE_BUCKET')
@@ -730,6 +732,7 @@ class NodeBot():
         self.init_firebase_messaging()
         #Init the listener
         self.init_bot_listener()
+
     def init_firebase_messaging(self):
         # initialize firebase messaging
 
@@ -748,7 +751,7 @@ class NodeBot():
 
 
     def init_bot_listener(self):
-        telegram.Bot(token=self.BOT_TOKEN).send_message(chat_id=self.CHAT_ID, text='Good Morning, CatCam is online!' + '🤙')
+        telegram.Bot(token=self.BOT_TOKEN).send_message(chat_id=self.CHAT_ID, text='Good Morning, Catcam is online!' + '🤙')
         # Add all commands to handler
         help_handler = CommandHandler('help', self.bot_help_cmd)
         self.bot_dispatcher.add_handler(help_handler)
@@ -810,6 +813,7 @@ class NodeBot():
             self.send_img(self.node_live_img, caption)
         else:
             self.send_text('No image available yet...')
+
     def bot_send_status(self, bot, update):
         if self.node_queue_info is not None and self.node_over_head_info is not None:
             bot_message = 'Queue length: ' + str(self.node_queue_info) + '\nOverhead: ' + str(self.node_over_head_info) + 's'
@@ -907,6 +911,7 @@ class NodeBot():
                 log.info('failed to send message:')
                 log.info(e)
             log.info(returnString)
+
     def sendCascImage(self):
         font=cv2.FONT_HERSHEY_SIMPLEX
         timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y, %H:%M:%S")
@@ -975,5 +980,4 @@ if __name__ == '__main__':
 
     sq_cascade = Sequential_Cascade_Feeder()
     log.info("Sequential_Cascade_Feeder initialized")
-
     sq_cascade.queque_handler()
