@@ -740,7 +740,7 @@ class NodeBot():
         self.storageBucket = os.getenv('FIREBASE_BUCKET')
         self.livePrefix='live_img_'
         self.cascPrefix='last_casc_img_'
-
+        self.timestamp=''
 
         self.last_msg_id = 0
         self.bot_updater = Updater(token=self.BOT_TOKEN)
@@ -792,8 +792,16 @@ class NodeBot():
         reboot = CommandHandler('reboot', self.node_reboot)
         self.bot_dispatcher.add_handler(reboot)
 
+        self.bot_dispatcher.add_error_handler(self.bot_error_handler)
+
         # Start the polling stuff
         self.bot_updater.start_polling()
+
+    # https://www.askpython.com/python/examples/python-telegram-bot
+    def bot_error_handler(self, update, context):
+        prettytimestamp= datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
+        log.info(prettytimestamp+": Telegram bot error")
+        log.info(context.error)
 
     def bot_help_cmd(self, bot, update):
         bot_message = 'The following commands are supported:'
@@ -850,7 +858,7 @@ class NodeBot():
     def send_text(self, message):
         try:
             telegram.Bot(token=self.BOT_TOKEN).send_message(chat_id=self.CHAT_ID, text=message, parse_mode=telegram.ParseMode.MARKDOWN)
-        except TelegramError as e:
+        except Exception as e:
             log.info('failed to send text message to telegram bot')
             log.info('message was '+message)
             log.info(e)
@@ -911,6 +919,7 @@ class NodeBot():
                 returnString = messaging.send(message)
             except Exception as e:
                 log.info('failed to send message:')
+                log.info(self.timestamp)
                 log.info(e)
             log.info(returnString)
         elif (int(topic) == 1):
@@ -935,6 +944,7 @@ class NodeBot():
                 returnString = messaging.send(message)
             except Exception as e:
                 log.info('failed to send message:')
+                log.info(self.timestamp)
                 log.info(e)
             log.info(returnString)
 
