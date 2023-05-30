@@ -365,6 +365,15 @@ class Sequential_Cascade_Feeder():
             else:
                 log.info('Nothing to work with => Queue_length:'+str(len(self.main_deque)))
                 time.sleep(0.25)
+                # check if thread is still alive (it may die unexpectedly)
+                if not camera_thread.is_alive():
+                    log.info("camera thread not found - restarting camera")
+                    camera = Camera()
+                    camera_thread = Thread(target=camera.fill_queue, args=(self.main_deque,), daemon=True)
+                    camera_thread.start()
+                    log.info("camera thread restarted")
+                    self.bot.send_text("camera thread was restarted")
+
 
             #Check if user force opens the door
             if self.bot.node_let_in_flag == True:
