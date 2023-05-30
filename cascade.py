@@ -186,6 +186,7 @@ class Sequential_Cascade_Feeder():
         sender_img = event_objects[max_prey_index].output_img
         caption = 'Cumuli: ' + str(cumuli) + ' => PREY DETECTED!' + ' 🐁🐁🐁' + event_str
         self.bot.send_img(img=sender_img, caption=caption)
+        self.bot.sendPushNotification("PREY detected!", caption,sender_img,"0")
         return
 
     def send_no_prey_message(self, event_objects, cumuli):
