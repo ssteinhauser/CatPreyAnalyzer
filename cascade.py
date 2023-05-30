@@ -187,6 +187,7 @@ class Sequential_Cascade_Feeder():
 
         sender_img = event_objects[max_prey_index].output_img
         caption = 'Cumuli: ' + str(cumuli) + ' => PREY DETECTED!' + ' 🐁🐁🐁' + event_str
+
         self.bot.send_img(img=sender_img, caption=caption)
         self.bot.sendPushNotification("PREY detected!", caption,sender_img,"0")
         return
@@ -206,6 +207,7 @@ class Sequential_Cascade_Feeder():
 
         sender_img = event_objects[min_prey_index].output_img
         caption = 'Cumuli: ' + str(cumuli) + ' => Cat has no prey...' + ' 🐱' + event_str
+
         self.bot.send_img(img=sender_img, caption=caption)
         self.bot.sendPushNotification("Cat without prey detected", caption,sender_img,"0")
         return
@@ -250,9 +252,8 @@ class Sequential_Cascade_Feeder():
         overhead = datetime.strptime(done_timestamp, "%Y_%m_%d_%H-%M-%S.%f") - datetime.strptime(self.main_deque[self.fps_offset][0], "%Y_%m_%d_%H-%M-%S.%f")
         log.info('Overhead:'+str(round(overhead.total_seconds(),3))+' s')
 
-        #Add this such that the bot has some info
+        #Add this so that the bot has some info
         self.bot.node_queue_info = len(self.main_deque)
-        self.bot.node_live_img = self.main_deque[self.fps_offset][1]
         live_img = self.main_deque[self.fps_offset][1]
         color = (97, 70, 223) # https://colorcodes.io/red/cerise-color-codes/
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -887,6 +888,7 @@ class NodeBot():
             except Exception as e:
                 log.info('failed to upload image:')
                 log.info(e)
+                returnUrl=""
         else:
             log.info('image file for upload to firebase not accessible? '+imagefile)
         return returnUrl
@@ -998,8 +1000,8 @@ class NodeBot():
                 self.sendPushNotification("current image","current image",live_filename,"1")
                 blob.delete()
             except cv2.error as e:
-               log.info("writing live img failed:")
-               log.info(e)
+                log.info("writing live img failed:")
+                log.info(e)
 
 class DummyDQueque():
     def __init__(self):
