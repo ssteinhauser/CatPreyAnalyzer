@@ -244,6 +244,7 @@ class Sequential_Cascade_Feeder():
         cascade_obj = self.feed(target_img=self.main_deque[self.fps_offset][1], img_name=self.main_deque[self.fps_offset][0])[1]
         #log.info('Runtime:'+ str(time.time() - start_time))
         done_timestamp = datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
+        prettytimestamp= datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
         log.info('Runtime:'+ str(round(time.time() - start_time,3))+ 's') # , Timestamp:'+ str(done_timestamp))
 
         overhead = datetime.strptime(done_timestamp, "%Y_%m_%d_%H-%M-%S.%f") - datetime.strptime(self.main_deque[self.fps_offset][0], "%Y_%m_%d_%H-%M-%S.%f")
@@ -252,6 +253,22 @@ class Sequential_Cascade_Feeder():
         #Add this such that the bot has some info
         self.bot.node_queue_info = len(self.main_deque)
         self.bot.node_live_img = self.main_deque[self.fps_offset][1]
+        live_img = self.main_deque[self.fps_offset][1]
+        color = (97, 70, 223) # https://colorcodes.io/red/cerise-color-codes/
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        fontScale = 2
+        lineType = 3
+        #self.input_text(img=live_img, text=done_timestamp, text_pos=(15, 100), color=color)
+        cv2.putText(live_img, prettytimestamp,
+                    (15, 60),
+                    font,
+                    fontScale,
+                    color,
+                    lineType)
+
+        self.bot.node_live_img=live_img
+        self.bot.timestamp=prettytimestamp
+
         self.bot.node_over_head_info = overhead.total_seconds()
 
         # Always delete the left part
@@ -266,7 +283,16 @@ class Sequential_Cascade_Feeder():
             #self.bot.send_text("Cat found")
 
             #Last cat pic for bot
-            self.bot.node_last_casc_img = cascade_obj.output_img
+            cv2.putText(cascade_obj.output_img, prettytimestamp,
+                     (15, 60),
+                     font,
+                     fontScale,
+                     color,
+                     lineType)
+            self.bot.node_last_casc_img=cascade_obj.output_img
+            #self.bot.uploadLastCascImage()
+            upload_thread = Thread(target=self.bot.uploadLastCascImage, daemon=True)
+            upload_thread.start()
 
             self.fps_offset = 0
             #If face found add the cumulus points
@@ -555,7 +581,7 @@ class Cascade:
                 log.info('Pred_Val: ' + str('%.2f' % pred_val))
                 pc_str = ' PC_Pred: ' + str(pred_class) + ' @ ' + str('%.2f' % pred_val)
                 color = (0, 0, 255) if pred_class else (0, 255, 0)
-                rec_img = self.input_text(img=rec_img, text=pc_str, text_pos=(15, 100), color=color)
+                rec_img = self.input_text(img=rec_img, text=pc_str, text_pos=(15, 120), color=color)
                 try:
                      my_resul = cv2.imwrite('preyprediction.jpg',rec_img)
                 except cv2.error as e:
@@ -568,11 +594,11 @@ class Cascade:
             else:
                 log.info('No Face Found...')
                 ff_str = 'No_Face'
-                rec_img = self.input_text(img=rec_img, text=ff_str, text_pos=(15, 100), color=(255, 255, 0))
+                rec_img = self.input_text(img=rec_img, text=ff_str, text_pos=(15, 120), color=(255, 255, 0))
 
         else:
             log.info('No Cat Found...')
-            rec_img = self.input_text(img=original_copy_img, text='CC_Pred: NoCat', text_pos=(15, 100), color=(255, 255, 0))
+            rec_img = self.input_text(img=original_copy_img, text='CC_Pred: NoCat', text_pos=(15, 120), color=(255, 255, 0))
 
         #log.info('writing test.jpg')
         #my_resul = cv2.imwrite('/home/rock/test.jpg',rec_img)
@@ -946,7 +972,7 @@ class NodeBot():
             return
         if (blob_exists):
             log.info("File exists, we should send image")
-            timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y-%H:%M:%S")
+            timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
 
             live_filename=self.livePrefix+timestamp_string+'.jpg'
             try:
@@ -978,6 +1004,8 @@ class DummyDQueque():
 
 if __name__ == '__main__':
 
+    prettytime=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y, %H:%M:%S")
+    print(prettytime+":  starting sequential cascade feeder")
     sq_cascade = Sequential_Cascade_Feeder()
     log.info("Sequential_Cascade_Feeder initialized")
     sq_cascade.queque_handler()
