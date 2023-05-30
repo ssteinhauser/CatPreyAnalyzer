@@ -5,15 +5,15 @@ import os,sys
 path_of_script = os.path.dirname(os.path.realpath(sys.argv[0]))
 name_of_script = os.path.basename(sys.argv[0])
 
-LOG_FILE_NAME=path_of_script+'/log/'+name_of_script+'.log'
+LOG_FILE_NAME=path_of_script+'/log/camera.log'
 LOGGING_LEVEL = logging.INFO
 
 formatter = logging.Formatter('%(asctime)s %(message)s',
-                              "%Y-%m-%d %H:%M:%S")
+                       "%Y-%m-%d %H:%M:%S")
 handler = logging.handlers.RotatingFileHandler(LOG_FILE_NAME, mode='a',
-                                               maxBytes=10000000, backupCount=7)
+                      maxBytes=10000000, backupCount=7)
 handler.setFormatter(formatter)
-log = logging.getLogger(name_of_script)
+log = logging.getLogger( __name__ )
 log.addHandler(handler)
 log.setLevel(LOGGING_LEVEL)
 
@@ -25,7 +25,7 @@ try:
    from gpiozero import CPUTemperature
    raspicam=True
 except ModuleNotFoundError:
-   log.info("raspicam modules not found, assuming v4l2 camera")
+   print("raspicam modules not found, assuming v4l2 camera")
    raspicam=False
 
 
@@ -83,18 +83,23 @@ class Camera:
                 cap.read(0)
                 #time.sleep(0.001)
                 cap.read(0)
+                log.info("capturing 60 frames")
                 for i in range(59):
                     ret, frame = cap.read()
                     time.sleep(0.3)
                     #print("frame read")
-                    deque.append(
+                    if ret:
+                        log.info("appending frame:")
+                        deque.append(
                         (datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f"), frame))
                     #deque.pop()
-                    log.info("Quelength: " + str(len(deque)))
-                #print("Loop ended, starting over.")
+                        log.info("Added "+str(i)+". Quelength: " + str(len(deque)))
                 try:
-                    cv.imwrite("/home/rock/test.jpg", frame)
+                    log.info("writing test image")
+                    cv.imwrite(path_of_script+"/test.jpg", frame)
                 except cv.error as e:
-                    log.info("writing frame failed.")
+                    log.info("writing test frame from camera thread failed.")
                 cap.release()
                 del cap
+                log.info("reset capture device, starting over")
+        log.info("Should not reach this point in camera thread??")
