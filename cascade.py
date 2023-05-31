@@ -583,7 +583,7 @@ class Cascade:
                 pred_class, pred_val, inference_time = self.do_pc_stage(pc_target_img=snout_crop)
                 log.info('Prey Prediction: ' + str(pred_class))
                 log.info('Pred_Val: ' + str('%.2f' % pred_val))
-                pc_str = ' PC_Pred: ' + str(pred_class) + ' @ ' + str('%.2f' % pred_val)
+                pc_str = 'PC_Pred: ' + str(pred_class) + ' @ ' + str('%.2f' % pred_val)
                 color = (0, 0, 255) if pred_class else (0, 255, 0)
                 rec_img = self.input_text(img=rec_img, text=pc_str, text_pos=(15, 120), color=color)
                 try:
@@ -844,7 +844,6 @@ class NodeBot():
             else:
                 self.send_text('Detection did not happen yet...')
 
-
     def bot_send_live_pic(self, bot, update):
         if self.node_live_img is not None:
             try:
@@ -880,7 +879,6 @@ class NodeBot():
         except Exception as e:
             log.info('failed to send image to telegram bot:')
             log.info(e)
-
 
     def send_img(self, img, caption):
         try:
@@ -992,7 +990,6 @@ class NodeBot():
 
     def sendLiveImage(self):
         log.info("checking for firebase file")
-
         blob=self.bucket.blob('settings.txt')
         try:
             blob_exists=blob.exists()
