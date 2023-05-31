@@ -291,6 +291,9 @@ class Sequential_Cascade_Feeder():
                      color,
                      lineType)
             self.bot.node_last_casc_img=cascade_obj.output_img
+            self.bot.uploadLastCascImage()
+            upload_thread = Thread(target=self.bot.uploadLastCascImage, daemon=True)
+            upload_thread.start()
 
             self.fps_offset = 0
             #If face found add the cumulus points
@@ -827,18 +830,17 @@ class NodeBot():
         os.system("sudo reboot")
 
     def bot_send_last_casc_pic(self, bot, update):
-        if self.node_last_casc_img is not None:
-            try:
-                cv2.imwrite('last_casc.jpg', self.node_last_casc_img)
-            except cv2.error as e:
-                log.info("writing last_casc.jpg failed")
-                self.send_text('could not write last_casc.jpg')
-                return
-
-            caption = 'Latest detection result'
-            self.send_img(self.node_last_casc_img, caption)
+        caption = 'Latest detection result'
+        #if self.node_last_casc_img is not None:
+        if os.path.isfile('last_casc.jpg'):
+        #    self.send_img(self.node_last_casc_img, caption)
+            self.send_img_file('last_casc.jpg',caption)
         else:
-            self.send_text('Detection did not happen yet...')
+            if self.node_last_casc_img is not None:
+                self.send_img(self.node_last_casc_img, caption)
+            else:
+                self.send_text('Detection did not happen yet...')
+
 
     def bot_send_live_pic(self, bot, update):
         if self.node_live_img is not None:
@@ -976,7 +978,6 @@ class NodeBot():
            color = (0, 200, 0),
            thickness = 3
         )
-
         last_casc_filename=self.cascPrefix+timestamp_string+'.jpg'
         try:
             my_resul = cv2.imwrite(last_casc_filename,self.node_last_casc_img)
