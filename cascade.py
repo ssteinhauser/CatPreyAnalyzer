@@ -2,7 +2,7 @@ import numpy as np
 from pathlib import Path
 import os, cv2, time, csv, sys, gc
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from collections import deque
 from threading import Thread
 from multiprocessing import Process
@@ -764,11 +764,19 @@ class NodeBot():
         self.bucket = storage.bucket()
         # delete old images from firebase storage
         log.info('Deleting old images from firebase storage')
+        cutoff = datetime.now(timezone.utc)- timedelta(days=1)
         blobs = self.bucket.list_blobs(prefix=self.cascPrefix)
         for blob in blobs:
             try:
                 log.info(blob)
-                blob.delete()
+                updated=blob.updated
+                # delete only those older than one day (=older than cutoff)
+
+                if (updated>cutoff):
+                    log.info("not yet to be deleted")
+                else:
+                    blob.delete()
+                    log.info("deleted")
             except Exception as e:
                 log.info('failed to delete '+blob)
                 log.info(e)
