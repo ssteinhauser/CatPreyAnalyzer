@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 # for firebase messaging
 from email.quoprimime import body_decode
 import firebase_admin
-from firebase_admin import credentials, messaging, storage
+from firebase_admin import credentials, messaging, storage, exceptions, db
 
 # for logging
 import logging.handlers
@@ -117,7 +117,7 @@ class Sequential_Cascade_Feeder():
         self.NO_PREY_FLAG = None
         self.queues_cumuli_in_event = []
         self.bot = NodeBot()
-        self.bot.sendPushNotification('catCam start','catCam AI software was restarted','','0')
+        self.bot.sendPushNotification('catCam start','catCam AI software was restarted','','','1')
 
         self.processing_pool = []
         #log.info("deque")
@@ -189,7 +189,7 @@ class Sequential_Cascade_Feeder():
         caption = 'Cumuli: ' + str(cumuli) + ' => PREY DETECTED!' + ' 🐁🐁🐁' + event_str
 
         self.bot.send_img(img=sender_img, caption=caption)
-        self.bot.sendPushNotification("PREY detected!", caption,sender_img,"0")
+        self.bot.sendDetectImage("PREY detected", "PREY detected", sender_img)
         return
 
     def send_no_prey_message(self, event_objects, cumuli):
@@ -209,7 +209,7 @@ class Sequential_Cascade_Feeder():
         caption = 'Cumuli: ' + str(cumuli) + ' => Cat has no prey...' + ' 🐱' + event_str
 
         self.bot.send_img(img=sender_img, caption=caption)
-        self.bot.sendPushNotification("Cat without prey detected", caption,sender_img,"0")
+        self.bot.sendDetectImage("Cat without prey detected", "Cat without prey detected", sender_img)
         return
 
     def send_dk_message(self, event_objects, cumuli):
@@ -225,6 +225,7 @@ class Sequential_Cascade_Feeder():
             sender_img = face_events[0].output_img
             caption = 'Cumuli: ' + str(cumuli) + " => Can't say for sure..." + ' 🤷‍♀️' + event_str + '\nMaybe use /letin?'
             self.bot.send_img(img=sender_img, caption=caption)
+            self.bot.sendDetectImage("Prey detection inconclusive", "not sure", sender_img)
         except Exception as e:
             log.info('Failed to extract sender_img in send_dk_message:')
             log.info(e)
@@ -742,6 +743,7 @@ class NodeBot():
         # Data for firebase messaging
         self.cred = credentials.Certificate("./firebasekey.json")
         self.storageBucket = os.getenv('FIREBASE_BUCKET')
+        self.database = os.getenv('FIREBASE_DATABASE')
         self.livePrefix='live_img_'
         self.cascPrefix='last_casc_img_'
         self.timestamp=''
@@ -766,7 +768,8 @@ class NodeBot():
     def init_firebase_messaging(self):
         # initialize firebase messaging
 
-        firebase_admin.initialize_app(self.cred, {'storageBucket': self.storageBucket})
+        firebase_admin.initialize_app(self.cred,
+            {'storageBucket': self.storageBucket, 'databaseURL':self.database})
         self.bucket = storage.bucket()
         # delete old images from firebase storage
         log.info('Deleting old images from firebase storage')
@@ -786,6 +789,8 @@ class NodeBot():
             except Exception as e:
                 log.info('failed to delete '+blob)
                 log.info(e)
+        self.dbref=db.reference('/')
+        self.images_ref=self.dbref.child('images')
 
 
     def init_bot_listener(self):
@@ -893,6 +898,14 @@ class NodeBot():
         #    log.info('failed to send image to telegram bot:')
         #    log.info(e)
 
+    def send_voice(self, audio, caption):
+        #audio_r='86.wav'
+        try:
+            telegram.Bot(token=self.BOT_TOKEN).send_voice(chat_id=self.CHAT_ID, voice=open(audio, 'rb'), caption=caption)
+        except Exception as e:
+            log.info('failed to send voice message to telegram bot:')
+            log.info(e)
+
     # upload image to firebase storage bucket
     def uploadImage(self, imagefile):
         blob=self.bucket.blob(imagefile)
@@ -910,17 +923,39 @@ class NodeBot():
             log.info('image file for upload to firebase not accessible? '+imagefile)
         return returnUrl
 
+    def addImageToDatabase(self, url, timeString):
+        timeStamp=datetime.strptime(timeString, "%d.%m.%Y %H:%M:%S")
+        unixTimeStamp=int(timeStamp.timestamp())
+        try:
+            self.images_ref.update({
+                unixTimeStamp : {
+                    'timestamp' : timeString,
+                    'url' : url
+                }
+            })
+        except Exception as e:
+            log.info('failed to update database:')
+            log.info(timeString)
+            log.info(e)
+
+
     # send firebase push notification
-    def sendPushNotification(self, title, body, imageSource, topic):
+    def sendPushNotification(self, title, body, imageSource, time, topic):
         topicAsString = ""
         imgUrl= self.uploadImage(imageSource)
+        if (imgUrl==""):
+            log.info("not sending message, image upload failed")
+            return
+
 
         if (int(topic) == 0):
+            self.addImageToDatabase(imgUrl,time)
             log.info("Topic is alert")
             topicAsString = "alert"
             message = messaging.Message(
                 {"ImageURL": imgUrl,
-                 "Type" : topicAsString},
+                 "Type" : topicAsString,
+                 "Time" : time},
                 notification=messaging.Notification(
                     title=title,
                     body=body,
@@ -934,6 +969,7 @@ class NodeBot():
                 )
             )
             log.info("Sending message")
+            returnString=""
             try:
                 returnString = messaging.send(message)
             except Exception as e:
@@ -946,7 +982,8 @@ class NodeBot():
             topicAsString = "update"
             message = messaging.Message(
                 {"ImageURL": imgUrl,
-                 "Type" : topicAsString},
+                 "Type" : topicAsString,
+                 "Time" : time},
                 notification=messaging.Notification(
                     title=title,
                     body=body,
@@ -967,18 +1004,23 @@ class NodeBot():
                 log.info(e)
             log.info(returnString)
 
+    def sendDetectImage(self, message, text, image):
+        timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
+        imgfilename=self.cascPrefix+timestamp_string+'_detect.jpg'
+        try:
+            my_resul = cv2.imwrite(imgfilename,image)
+            # save curremt live image for future model training
+            if self.node_live_img is not None:
+                my_resul = cv2.imwrite("clean_image_detect"+timestamp_string+".jpg",self.node_live_img)
+        except cv2.error as e:
+            log.info("writing detection image failed:")
+            log.info(e)
+            return
+        self.sendPushNotification(message, text, imgfilename, timestamp_string,"0")
+
     def sendCascImage(self):
-        font=cv2.FONT_HERSHEY_SIMPLEX
-        timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y, %H:%M:%S")
-        last_casc_img=cv2.putText(
-           img = self.node_last_casc_img,
-           text = timestamp_string,
-           org = (10, 40),
-           fontFace = font,
-           fontScale = 1.0,
-           color = (0, 200, 0),
-           thickness = 3
-        )
+        #font=cv2.FONT_HERSHEY_SIMPLEX
+        timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
         last_casc_filename=self.cascPrefix+timestamp_string+'.jpg'
         try:
             my_resul = cv2.imwrite(last_casc_filename,self.node_last_casc_img)
@@ -986,7 +1028,7 @@ class NodeBot():
             log.info("writing last cascade image failed:")
             log.info(e)
             return
-        self.sendPushNotification("Latest detection result", "detection result", last_casc_filename, "0")
+        self.sendPushNotification("Latest detection result", "detection result", last_casc_filename, timestamp_string,"0")
 
     def sendLiveImage(self):
         log.info("checking for firebase file")
@@ -1002,6 +1044,18 @@ class NodeBot():
             timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
 
             live_filename=self.livePrefix+timestamp_string+'.jpg'
+            blob.download_to_filename("settings.txt")
+            f=open('settings.txt')
+            firstline = f.readline()
+            f.close()
+            #if ('{SendCascImage:True}' in firstline):
+            #    log.info('text last_casc found in settings.txt')
+            #    try:
+            #        cv2.imwrite("last_casc_img.jpg", self.last_casc_img)
+            #    except cv2.error as e:
+            #        log.info("writing last casc img failed:")
+            #        log.info(e)
+            #else:
             try:
                 # delete old images from firebase storage
                 log.info('Deleting old images from firebase storage')
@@ -1012,7 +1066,7 @@ class NodeBot():
                 # write live file
                 cv2.imwrite(live_filename, self.node_live_img)
                 # send it
-                self.sendPushNotification("current image","current image",live_filename,"1")
+                self.sendPushNotification("current image","current image",live_filename,timestamp_string,"1")
                 blob.delete()
             except cv2.error as e:
                 log.info("writing live img failed:")

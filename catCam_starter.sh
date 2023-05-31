@@ -5,6 +5,7 @@ CHAT_ID="XXXXXXXXX"
 BOT_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 # Firebase info, edit to match your setup
 FIREBASE_BUCKET=""
+FIREBASE_DATABASE="https://.....firebasedatabase.app/"
 
 echo "Executing CatPreyAnalyzer"
 # Tensorflow Stuff
@@ -14,6 +15,7 @@ export PYTHONPATH=$PYTHONPATH:$HOME/tensorflow/models/research:$HOME/tensorflow/
 export CHAT_ID
 export BOT_TOKEN
 export FIREBASE_BUCKET
+export FIREBASE_DATABASE
 cd $HOME/CatPreyAnalyzer
 rm -f last_casc_img_*.jpg
 rm -f live_img_*.jpg
