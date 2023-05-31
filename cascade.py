@@ -861,17 +861,26 @@ class NodeBot():
             log.info('message was '+message)
             log.info(e)
 
+    def send_img_file(self, filename, caption):
+        try:
+            telegram.Bot(token=self.BOT_TOKEN).send_photo(chat_id=self.CHAT_ID, photo=open(filename, 'rb'), caption=caption)
+        except Exception as e:
+            log.info('failed to send image to telegram bot:')
+            log.info(e)
+
+
     def send_img(self, img, caption):
         try:
             cv2.imwrite('degubi.jpg', img)
         except cv2.error as e:
             log.info("writing degubi.jpg failed")
             return
-        try:
-            telegram.Bot(token=self.BOT_TOKEN).send_photo(chat_id=self.CHAT_ID, photo=open('degubi.jpg', 'rb'), caption=caption)
-        except TelegramError as e:
-            log.info('failed to send image to telegram bot:')
-            log.info(e)
+        self.send_img_file('degubi.jpg', caption)
+        #try:
+        #    telegram.Bot(token=self.BOT_TOKEN).send_photo(chat_id=self.CHAT_ID, photo=open('degubi.jpg', 'rb'), caption=caption)
+        #except Exception as e:
+        #    log.info('failed to send image to telegram bot:')
+        #    log.info(e)
 
     # upload image to firebase storage bucket
     def uploadImage(self, imagefile):
