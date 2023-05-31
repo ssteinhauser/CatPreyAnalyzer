@@ -301,7 +301,8 @@ class Sequential_Cascade_Feeder():
                 self.face_counter += 1
                 self.cumulus_points += (50 - int(round(100 * cascade_obj.pc_prey_val)))
                 self.FACE_FOUND_FLAG = True
-                self.bot.send_text("Cat face found")
+                #self.bot.send_text("Cat face found")
+                self.bot.send_img(self.bot.node_last_casc_img,"Cat face found")
                 self.bot.sendCascImage()
 
             log.info('CUMULUS:'+ str(self.cumulus_points))
