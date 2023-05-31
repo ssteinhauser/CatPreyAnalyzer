@@ -291,7 +291,7 @@ class Sequential_Cascade_Feeder():
                      color,
                      lineType)
             self.bot.node_last_casc_img=cascade_obj.output_img
-            self.bot.uploadLastCascImage()
+            #self.bot.uploadLastCascImage()
             upload_thread = Thread(target=self.bot.uploadLastCascImage, daemon=True)
             upload_thread.start()
 
@@ -1019,6 +1019,39 @@ class NodeBot():
             except cv2.error as e:
                 log.info("writing live img failed:")
                 log.info(e)
+
+    def uploadLastCascImage(self):
+        log.info("Sending last cascade image")
+        if self.node_last_casc_img is not None:
+            try:
+                cv2.imwrite("last_casc.jpg", self.node_last_casc_img)
+            except cv2.error as e:
+                log.info("writing last_casc.jpg failed:")
+                log.info(e)
+                return
+            time.sleep(1)
+            blob = self.bucket.blob("last_casc.jpg")
+            #if (blob.exists()):
+            #    try:
+            #        generation_match_precondition = None
+            #        # Optional: set a generation-match precondition to avoid potential race conditions
+            #        # and data corruptions. The request to delete is aborted if the object's
+            #        # generation number does not match your precondition.
+            #        blob.reload()  # Fetch blob metadata to use in generation_match_precondition.
+            #        generation_match_precondition = blob.generation
+            #        blob.delete(if_generation_match=generation_match_precondition)
+            #        log.info("deleted old last_casc.jpg from firebase")
+            #    except exceptions.FirebaseError as e:
+            #        log.info("deleting old last_casc.jpg from firebase failed")
+            #        log.info(e)
+            #        return
+            #    time.sleep(0.5)
+            url= self.uploadImage("last_casc.jpg")
+            log.info("uploaded new file last_casc.jpg.")
+            log.info("last_casc.jpg:" + url)
+        else:
+            log.info("detection did not happen yet, cannot write last_casc.jpg")
+
 
 class DummyDQueque():
     def __init__(self):
