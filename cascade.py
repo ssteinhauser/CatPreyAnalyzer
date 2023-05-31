@@ -413,7 +413,9 @@ class Sequential_Cascade_Feeder():
             # check if we should export a live image
             if (last_run_time+10 < current_time):
                 last_run_time=current_time
-                self.bot.sendLiveImage()
+                liveImageThread=Thread(target=self.bot.sendLiveImage, daemon=True)
+                liveImageThread.start()
+                #self.bot.sendLiveImage()
 
     def dummy_queque_handler(self):
         # Do this to force run all networks s.t. the network inference time stabilizes
