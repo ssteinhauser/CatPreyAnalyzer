@@ -291,9 +291,6 @@ class Sequential_Cascade_Feeder():
                      color,
                      lineType)
             self.bot.node_last_casc_img=cascade_obj.output_img
-            #self.bot.uploadLastCascImage()
-            upload_thread = Thread(target=self.bot.uploadLastCascImage, daemon=True)
-            upload_thread.start()
 
             self.fps_offset = 0
             #If face found add the cumulus points
