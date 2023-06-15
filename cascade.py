@@ -1,7 +1,7 @@
 import numpy as np
 from pathlib import Path
 import os, cv2, time, csv, sys, gc
-import pytz
+from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta, timezone
 from collections import deque
 from threading import Thread
@@ -246,8 +246,8 @@ class Sequential_Cascade_Feeder():
         #Feed the latest image in the Queue through the cascade
         cascade_obj = self.feed(target_img=self.main_deque[self.fps_offset][1], img_name=self.main_deque[self.fps_offset][0])[1]
         #log.info('Runtime:'+ str(time.time() - start_time))
-        done_timestamp = datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
-        prettytimestamp= datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
+        done_timestamp = datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
+        prettytimestamp= datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
         log.info('Runtime:'+ str(round(time.time() - start_time,3))+ 's') # , Timestamp:'+ str(done_timestamp))
 
         overhead = datetime.strptime(done_timestamp, "%Y_%m_%d_%H-%M-%S.%f") - datetime.strptime(self.main_deque[self.fps_offset][0], "%Y_%m_%d_%H-%M-%S.%f")
@@ -816,7 +816,7 @@ class NodeBot():
 
     # https://www.askpython.com/python/examples/python-telegram-bot
     def bot_error_handler(self, update, context):
-        prettytimestamp= datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
+        prettytimestamp= datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
         log.info(prettytimestamp+": Telegram bot error")
         log.info(context.error)
 
@@ -1005,7 +1005,7 @@ class NodeBot():
             log.info(returnString)
 
     def sendDetectImage(self, message, text, image):
-        timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
+        timestamp_string=datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
         imgfilename=self.cascPrefix+timestamp_string+'_detect.jpg'
         try:
             my_resul = cv2.imwrite(imgfilename,image)
@@ -1020,7 +1020,7 @@ class NodeBot():
 
     def sendCascImage(self):
         #font=cv2.FONT_HERSHEY_SIMPLEX
-        timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
+        timestamp_string=datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
         last_casc_filename=self.cascPrefix+timestamp_string+'.jpg'
         try:
             my_resul = cv2.imwrite(last_casc_filename,self.node_last_casc_img)
@@ -1041,7 +1041,7 @@ class NodeBot():
             return
         if (blob_exists):
             log.info("File exists, we should send image")
-            timestamp_string=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
+            timestamp_string=datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
 
             live_filename=self.livePrefix+timestamp_string+'.jpg'
             blob.download_to_filename("settings.txt")
@@ -1111,14 +1111,14 @@ class DummyDQueque():
 
     def dummy_queque_filler(self, main_deque):
         while(True):
-            img_name = datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
+            img_name = datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
             main_deque.append((img_name, self.target_img))
             log.info("Took image, que-length:"+str(main_deque.__len__()))
             time.sleep(0.4)
 
 if __name__ == '__main__':
 
-    prettytime=datetime.now(pytz.timezone('Europe/Zurich')).strftime("%d.%m.%Y, %H:%M:%S")
+    prettytime=datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y, %H:%M:%S")
     print(prettytime+":  starting sequential cascade feeder")
     sq_cascade = Sequential_Cascade_Feeder()
     log.info("Sequential_Cascade_Feeder initialized")
