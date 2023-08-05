@@ -114,7 +114,6 @@ class Sequential_Cascade_Feeder():
         self.NO_PREY_FLAG = None
         self.queues_cumuli_in_event = []
         self.bot = NodeBot()
-        self.bot.sendPushNotification('catCam start','catCam AI software was restarted','','','1')
 
         self.processing_pool = []
         #log.info("deque")
@@ -186,7 +185,6 @@ class Sequential_Cascade_Feeder():
         caption = 'Cumuli: ' + str(cumuli) + ' => PREY DETECTED!' + ' 🐁🐁🐁' + event_str
 
         self.bot.send_img(img=sender_img, caption=caption)
-        self.bot.sendDetectImage("PREY detected", "PREY detected", sender_img)
         return
 
     def send_no_prey_message(self, event_objects, cumuli):
@@ -206,7 +204,6 @@ class Sequential_Cascade_Feeder():
         caption = 'Cumuli: ' + str(cumuli) + ' => Cat has no prey...' + ' 🐱' + event_str
 
         self.bot.send_img(img=sender_img, caption=caption)
-        self.bot.sendDetectImage("Cat without prey detected", "Cat without prey detected", sender_img)
         return
 
     def send_dk_message(self, event_objects, cumuli):
@@ -222,7 +219,6 @@ class Sequential_Cascade_Feeder():
             sender_img = face_events[0].output_img
             caption = 'Cumuli: ' + str(cumuli) + " => Can't say for sure..." + ' 🤷‍♀️' + event_str + '\nMaybe use /letin?'
             self.bot.send_img(img=sender_img, caption=caption)
-            self.bot.sendDetectImage("Prey detection inconclusive", "not sure", sender_img)
         except Exception as e:
             log.info('Failed to extract sender_img in send_dk_message:')
             log.info(e)
@@ -289,9 +285,6 @@ class Sequential_Cascade_Feeder():
                      color,
                      lineType)
             self.bot.node_last_casc_img=cascade_obj.output_img
-            #self.bot.uploadLastCascImage()
-            upload_thread = Thread(target=self.bot.uploadLastCascImage, daemon=True)
-            upload_thread.start()
 
             self.fps_offset = 0
             #If face found add the cumulus points
@@ -300,8 +293,8 @@ class Sequential_Cascade_Feeder():
                 self.cumulus_points += (50 - int(round(100 * cascade_obj.pc_prey_val)))
                 self.FACE_FOUND_FLAG = True
                 #self.bot.send_text("Cat face found")
-                self.bot.send_img(self.bot.node_last_casc_img,"Cat face found")
-                self.bot.sendCascImage()
+                # TODO enable following line if you want to be notified, whenever a cat was detected
+                # self.bot.send_img(self.bot.node_last_casc_img,"Cat face found")
 
             log.info('CUMULUS:'+ str(self.cumulus_points))
             self.queues_cumuli_in_event.append((len(self.main_deque),self.cumulus_points, done_timestamp))
@@ -373,7 +366,6 @@ class Sequential_Cascade_Feeder():
         camera_thread = Thread(target=camera.fill_queue, args=(self.main_deque,), daemon=True)
         camera_thread.start()
         log.info("camera thread started")
-        last_run_time=time.time()
 
         while(True):
             current_time=time.time()
@@ -408,13 +400,6 @@ class Sequential_Cascade_Feeder():
                 self.bot.send_text('Ok door is open for ' + str(open_time) + 's...')
                 time.sleep(open_time)
                 self.bot.send_text('Door locked again, back to business...')
-
-            # check if we should export a live image
-            if (last_run_time+10 < current_time):
-                last_run_time=current_time
-                liveImageThread=Thread(target=self.bot.sendLiveImage, daemon=True)
-                liveImageThread.start()
-                #self.bot.sendLiveImage()
 
     def dummy_queque_handler(self):
         # Do this to force run all networks s.t. the network inference time stabilizes

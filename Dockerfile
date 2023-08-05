@@ -60,9 +60,7 @@ RUN cd $RESEARCH_PATH/object_detection && \
 	wget http://download.tensorflow.org/models/object_detection/ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz && \
 	tar -xzvf ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz
 
-COPY *.py $CAT_HOME/CatPreyAnalyzer/
-COPY *.sh $CAT_HOME/CatPreyAnalyzer/
-COPY models $CAT_HOME/CatPreyAnalyzer/models
+COPY . $CAT_HOME/CatPreyAnalyzer/
 RUN chown --recursive cat:cat $CAT_HOME
 RUN chmod +x $CAT_HOME/CatPreyAnalyzer/catCam_starter.sh
 
