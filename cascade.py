@@ -9,10 +9,7 @@ from multiprocessing import Process
 import telegram
 from telegram.ext import Updater, CommandHandler, Filters, MessageHandler
 import xml.etree.ElementTree as ET
-# for firebase messaging
 from email.quoprimime import body_decode
-import firebase_admin
-from firebase_admin import credentials, messaging, storage, exceptions, db
 
 # for logging
 import logging.handlers
@@ -740,10 +737,6 @@ class NodeBot():
         self.CHAT_ID= os.getenv('CHAT_ID')
         self.BOT_TOKEN = os.getenv('BOT_TOKEN')
 
-        # Data for firebase messaging
-        self.cred = credentials.Certificate("./firebasekey.json")
-        self.storageBucket = os.getenv('FIREBASE_BUCKET')
-        self.database = os.getenv('FIREBASE_DATABASE')
         self.livePrefix='live_img_'
         self.cascPrefix='last_casc_img_'
         self.timestamp=''
@@ -760,38 +753,8 @@ class NodeBot():
         self.node_over_head_info = None
         self.node_let_in_flag = None
 
-        #Init firebase
-        self.init_firebase_messaging()
         #Init the listener
         self.init_bot_listener()
-
-    def init_firebase_messaging(self):
-        # initialize firebase messaging
-
-        firebase_admin.initialize_app(self.cred,
-            {'storageBucket': self.storageBucket, 'databaseURL':self.database})
-        self.bucket = storage.bucket()
-        # delete old images from firebase storage
-        log.info('Deleting old images from firebase storage')
-        cutoff = datetime.now(timezone.utc)- timedelta(days=1)
-        blobs = self.bucket.list_blobs(prefix=self.cascPrefix)
-        for blob in blobs:
-            try:
-                log.info(blob)
-                updated=blob.updated
-                # delete only those older than one day (=older than cutoff)
-
-                if (updated>cutoff):
-                    log.info("not yet to be deleted")
-                else:
-                    blob.delete()
-                    log.info("deleted")
-            except Exception as e:
-                log.info('failed to delete '+blob)
-                log.info(e)
-        self.dbref=db.reference('/')
-        self.images_ref=self.dbref.child('images')
-
 
     def init_bot_listener(self):
         telegram.Bot(token=self.BOT_TOKEN).send_message(chat_id=self.CHAT_ID, text='Good Morning, Catcam is online!' + '🤙')
@@ -905,205 +868,6 @@ class NodeBot():
         except Exception as e:
             log.info('failed to send voice message to telegram bot:')
             log.info(e)
-
-    # upload image to firebase storage bucket
-    def uploadImage(self, imagefile):
-        blob=self.bucket.blob(imagefile)
-        returnUrl=""
-        if (os.path.isfile(imagefile)):
-            try:
-                blob.upload_from_filename(imagefile)
-                blob.make_public()
-                returnUrl = blob.public_url
-            except Exception as e:
-                log.info('failed to upload image:')
-                log.info(e)
-                returnUrl=""
-        else:
-            log.info('image file for upload to firebase not accessible? '+imagefile)
-        return returnUrl
-
-    def addImageToDatabase(self, url, timeString):
-        timeStamp=datetime.strptime(timeString, "%d.%m.%Y %H:%M:%S")
-        unixTimeStamp=int(timeStamp.timestamp())
-        try:
-            self.images_ref.update({
-                unixTimeStamp : {
-                    'timestamp' : timeString,
-                    'url' : url
-                }
-            })
-        except Exception as e:
-            log.info('failed to update database:')
-            log.info(timeString)
-            log.info(e)
-
-
-    # send firebase push notification
-    def sendPushNotification(self, title, body, imageSource, time, topic):
-        topicAsString = ""
-        imgUrl= self.uploadImage(imageSource)
-        if (imgUrl==""):
-            log.info("not sending message, image upload failed")
-            return
-
-
-        if (int(topic) == 0):
-            self.addImageToDatabase(imgUrl,time)
-            log.info("Topic is alert")
-            topicAsString = "alert"
-            message = messaging.Message(
-                {"ImageURL": imgUrl,
-                 "Type" : topicAsString,
-                 "Time" : time},
-                notification=messaging.Notification(
-                    title=title,
-                    body=body,
-                    image=imgUrl
-                ),
-                topic=topicAsString,
-                android=messaging.AndroidConfig(
-                    notification=messaging.AndroidNotification(
-                        channel_id="alert"
-                    )
-                )
-            )
-            log.info("Sending message")
-            returnString=""
-            try:
-                returnString = messaging.send(message)
-            except Exception as e:
-                log.info('failed to send message:')
-                log.info(self.timestamp)
-                log.info(e)
-            log.info(returnString)
-        elif (int(topic) == 1):
-            log.info("Topic is update")
-            topicAsString = "update"
-            message = messaging.Message(
-                {"ImageURL": imgUrl,
-                 "Type" : topicAsString,
-                 "Time" : time},
-                notification=messaging.Notification(
-                    title=title,
-                    body=body,
-                    image=imgUrl
-                ),
-                topic=topicAsString,
-                android=messaging.AndroidConfig(
-                    notification=messaging.AndroidNotification(
-                        channel_id="update"
-                    )
-                )
-            )
-            try:
-                returnString = messaging.send(message)
-            except Exception as e:
-                log.info('failed to send message:')
-                log.info(self.timestamp)
-                log.info(e)
-            log.info(returnString)
-
-    def sendDetectImage(self, message, text, image):
-        timestamp_string=datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
-        imgfilename=self.cascPrefix+timestamp_string+'_detect.jpg'
-        try:
-            my_resul = cv2.imwrite(imgfilename,image)
-            # save curremt live image for future model training
-            if self.node_live_img is not None:
-                my_resul = cv2.imwrite("clean_image_detect"+timestamp_string+".jpg",self.node_live_img)
-        except cv2.error as e:
-            log.info("writing detection image failed:")
-            log.info(e)
-            return
-        self.sendPushNotification(message, text, imgfilename, timestamp_string,"0")
-
-    def sendCascImage(self):
-        #font=cv2.FONT_HERSHEY_SIMPLEX
-        timestamp_string=datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
-        last_casc_filename=self.cascPrefix+timestamp_string+'.jpg'
-        try:
-            my_resul = cv2.imwrite(last_casc_filename,self.node_last_casc_img)
-        except cv2.error as e:
-            log.info("writing last cascade image failed:")
-            log.info(e)
-            return
-        self.sendPushNotification("Latest detection result", "detection result", last_casc_filename, timestamp_string,"0")
-
-    def sendLiveImage(self):
-        log.info("checking for firebase file")
-        blob=self.bucket.blob('settings.txt')
-        try:
-            blob_exists=blob.exists()
-        except Exception as e:
-            log.info('checking for settings.txt failed:')
-            log.info(e)
-            return
-        if (blob_exists):
-            log.info("File exists, we should send image")
-            timestamp_string=datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y %H:%M:%S")
-
-            live_filename=self.livePrefix+timestamp_string+'.jpg'
-            blob.download_to_filename("settings.txt")
-            f=open('settings.txt')
-            firstline = f.readline()
-            f.close()
-            #if ('{SendCascImage:True}' in firstline):
-            #    log.info('text last_casc found in settings.txt')
-            #    try:
-            #        cv2.imwrite("last_casc_img.jpg", self.last_casc_img)
-            #    except cv2.error as e:
-            #        log.info("writing last casc img failed:")
-            #        log.info(e)
-            #else:
-            try:
-                # delete old images from firebase storage
-                log.info('Deleting old images from firebase storage')
-                oldblobs = self.bucket.list_blobs(prefix=self.livePrefix)
-                for oldblob in oldblobs:
-                    log.info(oldblob)
-                    oldblob.delete()
-                # write live file
-                cv2.imwrite(live_filename, self.node_live_img)
-                # send it
-                self.sendPushNotification("current image","current image",live_filename,timestamp_string,"1")
-                blob.delete()
-            except cv2.error as e:
-                log.info("writing live img failed:")
-                log.info(e)
-
-    def uploadLastCascImage(self):
-        log.info("Sending last cascade image")
-        if self.node_last_casc_img is not None:
-            try:
-                cv2.imwrite("last_casc.jpg", self.node_last_casc_img)
-            except cv2.error as e:
-                log.info("writing last_casc.jpg failed:")
-                log.info(e)
-                return
-            time.sleep(1)
-            blob = self.bucket.blob("last_casc.jpg")
-            #if (blob.exists()):
-            #    try:
-            #        generation_match_precondition = None
-            #        # Optional: set a generation-match precondition to avoid potential race conditions
-            #        # and data corruptions. The request to delete is aborted if the object's
-            #        # generation number does not match your precondition.
-            #        blob.reload()  # Fetch blob metadata to use in generation_match_precondition.
-            #        generation_match_precondition = blob.generation
-            #        blob.delete(if_generation_match=generation_match_precondition)
-            #        log.info("deleted old last_casc.jpg from firebase")
-            #    except exceptions.FirebaseError as e:
-            #        log.info("deleting old last_casc.jpg from firebase failed")
-            #        log.info(e)
-            #        return
-            #    time.sleep(0.5)
-            url= self.uploadImage("last_casc.jpg")
-            log.info("uploaded new file last_casc.jpg.")
-            log.info("last_casc.jpg:" + url)
-        else:
-            log.info("detection did not happen yet, cannot write last_casc.jpg")
-
 
 class DummyDQueque():
     def __init__(self):

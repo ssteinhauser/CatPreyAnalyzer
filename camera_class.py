@@ -116,7 +116,8 @@ class Camera:
 #                del picam2
 #                time.sleep(0.5)
             else:
-                cap=cv.VideoCapture(0)
+                streamURL = os.getenv('STREAM_URL')
+                cap=cv.VideoCapture(streamURL)
                 #Set the resolution
                 log.info("Setting up camera")
                 cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920)

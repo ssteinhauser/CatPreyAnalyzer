@@ -1,24 +1,19 @@
 #!/usr/bin/env bash
 
-# Telegram Bot info, edit for your bot
-CHAT_ID="XXXXXXXXX"
-BOT_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-# Firebase info, edit to match your setup
-FIREBASE_BUCKET=""
-FIREBASE_DATABASE="https://.....firebasedatabase.app/"
+# Telegram Bot info - set as env vars for your bot
+# CHAT_ID="XXXXXXXXX"
+# BOT_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 echo "Executing CatPreyAnalyzer"
 # Tensorflow Stuff
 PYTHONVERSION=$(ls -la `which python3`|awk -F '->' '{print $2}'|sed -e 's/^[[:space:]]*//')
 export PYTHONPATH=$PYTHONPATH:$HOME/tensorflow/models/research:$HOME/tensorflow/models/research/slim:/usr/local/lib/$PYTHONVERSION/site-packages
 
-export CHAT_ID
-export BOT_TOKEN
-export FIREBASE_BUCKET
-export FIREBASE_DATABASE
 cd $HOME/CatPreyAnalyzer
+
 rm -f last_casc_img_*.jpg
 rm -f live_img_*.jpg
+
 # start software repeatedly, in case it crashes
 while :; do
   python3 -u cascade.py
