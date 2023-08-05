@@ -8,10 +8,24 @@ This project aims to perform Cat Prey Detection with Deep Learning on any cat in
 This isn't the first approach at solving the mentioned problem! There have been other equally (if not better) valid approaches such as the [Catcierge](https://github.com/JoakimSoderberg/catcierge) which analyzes the silhouette of the cat a very recent approach of the [AI powered Catflap](https://www.theverge.com/tldr/2019/6/30/19102430/amazon-engineer-ai-powered-catflap-prey-ben-hamm).
 The difference of this project however is that it aims to solve *general* cat-prey detection through a vision based approach. Meaning that this should work for any cat! 
 
+# How to use with docker
+
+## Build
+```bash
+$HOME/CatPreyAnalyzer
+docker build -t cat-prey-analyzer .
+```
+
+## Run
+
+```bash
+docker run --env CHAT_ID='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' --env BOT_TOKEN='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' --env STREAM_URL=0 cat-prey-analyzer
+```
+
 # How to use the Code
 The code is meant to run on a RPI4 with the [IR JoyIt Camera](https://joy-it.net/de/products/rb-camera-IR_PRO) attached. If you have knowledge regarding Keras, you can also run the models on your own, as the .h5 files can be found in the /models directory (check the input shapes, as they can vary). Nonetheless, I will explain the prerequesites to run this project on the RPI4 with the attached infrared camera:
 
-- Download the whole project and transfer it to your RPI. Make sure to place the folder in your home directory such that its path matches: ```/home/pi/CatPreyAnalyzer```
+- Download the whole project and transfer it to your RPI. Make sure to place the folder in your home directory such that its path matches: ```$HOME/CatPreyAnalyzer```
 
 - Install the tensorflow object detection API as explained in [EdjeElectronics Repositoy](https://github.com/EdjeElectronics/TensorFlow-Object-Detection-on-the-Raspberry-Pi), which provides other excellent RPI object detection information.
 
@@ -26,11 +40,11 @@ The code is meant to run on a RPI4 with the [IR JoyIt Camera](https://joy-it.net
   
   - If you want your RPI to directly boot into the Cat_Prey_Analyzer then I suggest you use a crontab. To do so, on the RPI type: ```crontab -e``` and enter 
   ```
-  @reboot sleep 30 && sudo /home/pi/CatPreyAnalyzer/catCam_starter.sh
+  @reboot sleep 30 && sudo $HOME/CatPreyAnalyzer/catCam_starter.sh
   ```
   - Don't forget to make the ```catCam_starter.sh``` executable by performing 
   ```
-  chmod +x /home/pi/CatPreyAnalyzer/catCam_starter.sh
+  chmod +x $HOME/CatPreyAnalyzer/catCam_starter.sh
   ```
   - Reboot and enjoy!
   
@@ -127,20 +141,7 @@ If you don't use a Raspberry Pi, but an alternative such as the [Radxa Rock 3a](
     cap.release()
     ```
     (check ```test.png``` for a captured frame)
-  
-# Firebase messaging
-The original project uses telegram as a means of interaction with the software. There are other means of sending messages, which can be much more convenient. For instance, if you plan to use your smartphone, which alerts you of any cat approaching your camera, you could create an app for that. This can be much more custmizable than receiving telegram messages. One option for sending messages to smartphone apps is [Google Firebase Messaging](https://firebase.google.com/docs/cloud-messaging).
-There is a python implementation that allows for integrating Firebase Messaging:
-   ```
-    import firebase_admin
-    from firebase_admin import credentials, messaging, storage
-   ```
-Setting up Firebase is described [here](https://medium.com/@abdelhedihlel/upload-files-to-firebase-storage-using-python-782213060064). In essence, you need a credentials file (JSON) and the name of the storage bucket. The storage bucket must be created during the Firebase setup. The credentials file can be downloaded from Google Firebase. It should be named ```firebasekey.json``` and placed in the same directory as the ```cascade.py``` python code. The storage bucket name should be defined in ```catCam_starter.sh``` in an environment variable:
-    ```
-    FIREBASE_BUCKET="xxxxx.xxxx.xxx"
-    ```
-Of course, you would need to write a smartphone app which receives messages via Firebase.
-If you don't want to use firebase messaging, comment all lines which contain the method ```sendPushNotification``` and the call to the initialization (```init_firebase_messaging```)
+
 # A word of caution
 This project uses deep learning (DL)! Contrary to popular belief DL is **not** black magic (altough close to 😎)! The network perceives image data differently than us humans. It "sees" more abstractly than us. This means a cat in the image lives as an abstract blob deep within the layers of the network. Thus there are going to be instances where the system will produce absurdly wrong statements such as:
 

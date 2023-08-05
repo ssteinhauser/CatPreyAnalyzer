@@ -15,7 +15,7 @@ rm -f last_casc_img_*.jpg
 rm -f live_img_*.jpg
 
 # start software repeatedly, in case it crashes
-while :; do
+while true; do
   python3 -u cascade.py
   echo "cascade software ended - restarting"
   sleep 2
