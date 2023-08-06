@@ -293,6 +293,7 @@ class PC_Stage():
     def pc_do(self, target_img):
         pred_val, inference_time = self.pc_prediction(img=target_img, pc_model=self.pc_model)
 
+        print('PC_time: ', inference_time)
         if pred_val <= 0.5:
             return False, pred_val, inference_time
         else:
@@ -342,6 +343,7 @@ class FF_Stage():
     def ff_do(self, target_img):
         pred, inference_time = self.ff_prediction(img=target_img, ff_model=self.ff_model)
 
+        print('FF_time: ', inference_time)
         if pred <= 0.5:
             return True, pred, inference_time
         else:
@@ -425,4 +427,5 @@ class Eye_Stage():
         pc_ymax = int(bbs[1][1])
         snout_crop = cc_target_img[pc_ymin:pc_ymax, pc_xmin:pc_xmax].copy()
 
+        print('Eyes_time: ', inference_time)
         return snout_crop, bbs, inference_time

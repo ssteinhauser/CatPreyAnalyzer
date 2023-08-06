@@ -95,7 +95,7 @@ class Sequential_Cascade_Feeder():
         self.event_nr = 0
         self.base_cascade = Cascade()
         self.DEFAULT_FPS_OFFSET = 1
-        self.QUEQUE_MAX_THRESHOLD = 30
+        self.QUEQUE_MAX_THRESHOLD = 180
         self.fps_offset = self.DEFAULT_FPS_OFFSET
         self.MAX_PROCESSES = 5
         self.EVENT_FLAG = False
@@ -275,7 +275,7 @@ class Sequential_Cascade_Feeder():
             self.EVENT_FLAG = True
             self.event_nr = self.get_event_nr()
             self.event_objects.append(cascade_obj)
-            #self.bot.send_text("Cat found")
+            self.bot.send_text("Cat found")
 
             #Last cat pic for bot
             cv2.putText(cascade_obj.output_img, prettytimestamp,
@@ -294,7 +294,7 @@ class Sequential_Cascade_Feeder():
                 self.FACE_FOUND_FLAG = True
                 #self.bot.send_text("Cat face found")
                 # TODO enable following line if you want to be notified, whenever a cat was detected
-                # self.bot.send_img(self.bot.node_last_casc_img,"Cat face found")
+                self.bot.send_img(self.bot.node_last_casc_img,"Cat face found")
 
             log.info('CUMULUS:'+ str(self.cumulus_points))
             self.queues_cumuli_in_event.append((len(self.main_deque),self.cumulus_points, done_timestamp))

@@ -48,7 +48,7 @@ import numpy as np
 import io, gc
 
 class Camera:
-    def __init__(self,):
+    def __init__(self):
         if raspicam:
             IRPin = 36
             # GPIO Stuff
@@ -65,7 +65,7 @@ class Camera:
             picam2.set_controls({"AwbEnable": 1,"ColourGains": (0.8, 1)})
             picam2.start()
 
-        while(1):
+        while True:
             gc.collect()
             if raspicam:
                 camera = PiCamera()
@@ -122,25 +122,24 @@ class Camera:
                 log.info("Setting up camera")
                 cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
                 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)
-                cap.read(0)
+                cap.read()
                 #time.sleep(0.001)
-                cap.read(0)
+                cap.read()
                 log.info("capturing 60 frames")
                 for i in range(61):
                     ret, frame = cap.read()
-                    time.sleep(0.3)
+                    time.sleep(0.04) # 25fps
                     #print("frame read")
                     if ret:
                         log.info("appending frame:")
-                        deque.append(
-                        (datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f"), frame))
+                        deque.append((datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f"), frame))
                     #deque.pop()
                         log.info("Added "+str(i)+". Quelength: " + str(len(deque)))
-                try:
-                    log.info("writing test image")
-                    cv.imwrite(path_of_script+"/test.jpg", frame)
-                except cv.error as e:
-                    log.info("writing test frame from camera thread failed.")
+                # try:
+                #     log.info("writing test image")
+                #     cv.imwrite(path_of_script+"/test.jpg", frame)
+                # except cv.error as e:
+                #     log.info("writing test frame from camera thread failed.")
                 cap.release()
                 del cap
                 log.info("reset capture device, starting over")
@@ -152,10 +151,11 @@ class Camera:
         fontScale = 2
         lineType = 3 
 
-        cv.putText(img, text,
-                    text_pos,
-                    font, 
-                    fontScale,
-                    color,
-                    lineType)
+        cv.putText(img,
+                   text,
+                   text_pos,
+                   font, 
+                   fontScale,
+                   color,
+                   lineType)
         return img
