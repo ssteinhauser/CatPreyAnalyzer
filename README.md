@@ -12,7 +12,7 @@ The difference of this project however is that it aims to solve *general* cat-pr
 
 ## Build
 ```bash
-$HOME/CatPreyAnalyzer
+cd $HOME/CatPreyAnalyzer
 docker build -t cat-prey-analyzer .
 ```
 
