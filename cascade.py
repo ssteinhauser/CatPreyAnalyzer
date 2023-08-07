@@ -275,7 +275,7 @@ class Sequential_Cascade_Feeder():
             self.EVENT_FLAG = True
             self.event_nr = self.get_event_nr()
             self.event_objects.append(cascade_obj)
-            self.bot.send_text("Cat found")
+            # self.bot.send_text("Cat found")
 
             #Last cat pic for bot
             cv2.putText(cascade_obj.output_img, prettytimestamp,
