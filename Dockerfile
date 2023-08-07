@@ -36,8 +36,7 @@ RUN pip3 install tensorflow \
                  pillow \
                  lxml \
                  jupyter \
-                 matplotlib \
-                 firebase-admin
+                 matplotlib
 
 ARG PROTOC_ZIP=/tmp/protoc.zip
 RUN wget --output-document "$PROTOC_ZIP" https://github.com/protocolbuffers/protobuf/releases/download/v3.20.3/protoc-3.20.3-linux-x86_64.zip && \
