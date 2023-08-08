@@ -28,10 +28,8 @@ cat_cam_py = str(Path(os.getcwd()).parents[0])
 LOG_FILE_NAME=path_of_script+'/log/catCam.log'
 LOGGING_LEVEL = logging.INFO
 
-formatter = logging.Formatter('%(asctime)s %(message)s',
-                              "%Y-%m-%d %H:%M:%S")
-handler = logging.handlers.RotatingFileHandler(LOG_FILE_NAME, mode='a',
-                                               maxBytes=10000000, backupCount=7)
+formatter = logging.Formatter('%(asctime)s %(message)s', "%Y-%m-%d %H:%M:%S")
+handler = logging.handlers.RotatingFileHandler(LOG_FILE_NAME, mode='a', maxBytes=10000000, backupCount=7)
 handler.setFormatter(formatter)
 log = logging.getLogger(name_of_script)
 log.addHandler(handler)
@@ -95,7 +93,7 @@ class Sequential_Cascade_Feeder():
         self.event_nr = 0
         self.base_cascade = Cascade()
         self.DEFAULT_FPS_OFFSET = 1
-        self.QUEQUE_MAX_THRESHOLD = 180
+        self.QUEQUE_MAX_THRESHOLD = 30
         self.fps_offset = self.DEFAULT_FPS_OFFSET
         self.MAX_PROCESSES = 5
         self.EVENT_FLAG = False

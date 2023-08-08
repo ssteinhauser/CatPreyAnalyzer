@@ -8,10 +8,8 @@ name_of_script = os.path.basename(sys.argv[0])
 LOG_FILE_NAME=path_of_script+'/log/camera.log'
 LOGGING_LEVEL = logging.INFO
 
-formatter = logging.Formatter('%(asctime)s %(message)s',
-                       "%Y-%m-%d %H:%M:%S")
-handler = logging.handlers.RotatingFileHandler(LOG_FILE_NAME, mode='a',
-                      maxBytes=10000000, backupCount=7)
+formatter = logging.Formatter('%(asctime)s %(message)s', "%Y-%m-%d %H:%M:%S")
+handler = logging.handlers.RotatingFileHandler(LOG_FILE_NAME, mode='a', maxBytes=10000000, backupCount=7)
 handler.setFormatter(formatter)
 log = logging.getLogger( __name__ )
 log.addHandler(handler)
@@ -128,7 +126,8 @@ class Camera:
                 log.info("capturing 60 frames")
                 for i in range(61):
                     ret, frame = cap.read()
-                    time.sleep(0.04) # 25fps
+                    # time.sleep(1/25) # 25fps
+                    time.sleep(1/3) # 3fps
                     #print("frame read")
                     if ret:
                         log.info("appending frame:")
