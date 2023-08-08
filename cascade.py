@@ -246,7 +246,7 @@ class Sequential_Cascade_Feeder():
 
         #Add this so that the bot has some info
         self.bot.node_queue_info = len(self.main_deque)
-        live_img = self.main_deque[self.fps_offset][1]
+        live_img_name, live_img = self.main_deque[self.fps_offset]
         color = (97, 70, 223) # https://colorcodes.io/red/cerise-color-codes/
         font = cv2.FONT_HERSHEY_SIMPLEX
         fontScale = 2
@@ -259,7 +259,7 @@ class Sequential_Cascade_Feeder():
                     color,
                     lineType)
 
-        self.bot.node_live_img=live_img
+        self.bot.node_live_img=(live_img_name, live_img)
         self.bot.timestamp=prettytimestamp
 
         self.bot.node_over_head_info = overhead.total_seconds()
@@ -797,15 +797,16 @@ class NodeBot():
 
     def bot_send_live_pic(self, bot, update):
         if self.node_live_img is not None:
+            live_img_name, live_img = self.node_live_img
             try:
-                cv2.imwrite('live_img.jpg', self.node_live_img)
+                cv2.imwrite('live_img.jpg', live_img)
             except cv2.error as e:
                 log.info("writing live_img.jpg failed")
                 self.send_text('could not write live_img.jpg')
                 return
 
-            caption = 'Current image'
-            self.send_img(self.node_live_img, caption)
+            caption = 'Current image: ' + str(live_img_name)
+            self.send_img(live_img, caption)
         else:
             self.send_text('No image available yet...')
 
