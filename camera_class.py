@@ -57,6 +57,7 @@ class Camera:
             picam2.configure(config)
             picam2.set_controls({"AwbEnable": 1,"ColourGains": (0.8, 1)})
             picam2.start()
+            i = 0
         elif not raspicam:
             streamURL = os.getenv('STREAM_URL')
             cap = cv.VideoCapture(streamURL)
@@ -64,6 +65,7 @@ class Camera:
             log.info("Setting up camera")
             cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
             cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)
+            i = 0
 
         while True:
             gc.collect()
