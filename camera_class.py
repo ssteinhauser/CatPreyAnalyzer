@@ -124,7 +124,7 @@ class Camera:
                 deque.append((datestr, frame))
                 log.info("Added " + str(i) + ". Quelength: " + str(len(deque)))
             else:
-                ret, frame = cap.read()
+                frame = cap.read()
                 # time.sleep(1/25) # 25fps
                 time.sleep(1/3) # 3fps
                 if ret:
