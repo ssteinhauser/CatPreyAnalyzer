@@ -125,10 +125,12 @@ class Camera:
                 deque.append((datestr, frame))
                 log.info("Added " + str(i) + ". Quelength: " + str(len(deque)))
             else:
-                time.sleep(1/3) # 3fps
-                log.info("appending frame:")
                 frame = cap.read()
-                deque.append((datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f"), frame))
-                log.info("Added " + str(i) + ". Quelength: " + str(len(deque)))
+                # time.sleep(1/25) # 25fps
+                time.sleep(1/3) # 3fps
+                if ret:
+                    log.info("appending frame:")
+                    deque.append((datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f"), frame))
+                    log.info("Added " + str(i) + ". Quelength: " + str(len(deque)))
 
         log.info("Should not reach this point in camera thread??")
