@@ -65,6 +65,7 @@ class Camera:
             log.info("Setting up camera")
             cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
             cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)
+            cap.set(cv.CAP_PROP_BUFFERSIZE, 0)
             i = 0
 
         while True:
@@ -98,9 +99,8 @@ class Camera:
                 deque.append((datestr, frame))
                 log.info("Added " + str(i) + ". Quelength: " + str(len(deque)))
             else:
-                ret, frame = cap.read()
-                # time.sleep(1/25) # 25fps
                 time.sleep(1/3) # 3fps
+                ret, frame = cap.read()
                 if ret:
                     log.info("appending frame:")
                     deque.append((datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f"), frame))
