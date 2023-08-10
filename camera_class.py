@@ -90,7 +90,6 @@ class Camera:
         elif not raspicam:
             streamURL = os.getenv('STREAM_URL')
             cap = VideoCapture(streamURL)
-            # Set the resolution
             log.info("Setting up camera")
             i = 0
 
