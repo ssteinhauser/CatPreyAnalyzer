@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 log.addHandler(handler)
 log.setLevel(LOGGING_LEVEL)
 
+# TODO implement alive check and forward to cascade.py
 class VideoCapture:
   def __init__(self, name):
     self.cap = cv.VideoCapture(name)
