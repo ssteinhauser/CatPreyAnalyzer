@@ -255,7 +255,7 @@ class Sequential_Cascade_Feeder():
         #self.input_text(img=live_img, text=done_timestamp, text_pos=(15, 100), color=color)
         cv2.putText(live_img,
                     prettytimestamp,
-                    (15, 60),
+                    (15, 90),
                     font,
                     fontScale,
                     color,
@@ -279,7 +279,7 @@ class Sequential_Cascade_Feeder():
 
             #Last cat pic for bot
             cv2.putText(cascade_obj.output_img, prettytimestamp,
-                     (15, 60),
+                     (15, 90),
                      font,
                      fontScale,
                      color,
@@ -569,7 +569,7 @@ class Cascade:
                 log.info('Pred_Val: ' + str('%.2f' % pred_val))
                 pc_str = 'PC_Pred: ' + str(pred_class) + ' @ ' + str('%.2f' % pred_val)
                 color = (0, 0, 255) if pred_class else (0, 255, 0)
-                rec_img = self.input_text(img=rec_img, text=pc_str, text_pos=(15, 120), color=color)
+                rec_img = self.input_text(img=rec_img, text=pc_str, text_pos=(15, 150), color=color)
                 try:
                      my_resul = cv2.imwrite('preyprediction.jpg',rec_img)
                 except cv2.error as e:
@@ -582,11 +582,11 @@ class Cascade:
             else:
                 log.info('No Face Found...')
                 ff_str = 'No_Face'
-                rec_img = self.input_text(img=rec_img, text=ff_str, text_pos=(15, 120), color=(255, 255, 0))
+                rec_img = self.input_text(img=rec_img, text=ff_str, text_pos=(15, 150), color=(255, 255, 0))
 
         else:
             log.info('No Cat Found...')
-            rec_img = self.input_text(img=original_copy_img, text='CC_Pred: NoCat', text_pos=(15, 120), color=(255, 255, 0))
+            rec_img = self.input_text(img=original_copy_img, text='CC_Pred: NoCat', text_pos=(15, 150), color=(255, 255, 0))
 
         #log.info('writing test.jpg')
         #my_resul = cv2.imwrite('/home/rock/test.jpg',rec_img)
