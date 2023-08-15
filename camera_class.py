@@ -124,7 +124,7 @@ class Camera:
                 deque.append((datestr, frame))
                 log.info("Added " + str(i) + ". Quelength: " + str(len(deque)))
             else:
-                time.sleep(1/3) # 3fps
+                time.sleep(1/10) # denominator = fps
                 log.info("appending frame:")
                 frame = cap.read()
                 deque.append((datetime.now(pytz.timezone('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f"), frame))

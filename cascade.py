@@ -235,7 +235,9 @@ class Sequential_Cascade_Feeder():
         log.info('Working the Queue with len:'+ str(len(self.main_deque)))
         start_time = time.time()
         #Feed the latest image in the Queue through the cascade
-        self.fps_offset = max(1, len(self.main_deque) - 1)
+        if self.fps_offset != 0:
+            # TODO just a quickfix - find better implementation
+            self.fps_offset = max(self.fps_offset, len(self.main_deque) - 1)
         cascade_obj = self.feed(target_img=self.main_deque[self.fps_offset][1], img_name=self.main_deque[self.fps_offset][0])[1]
         #log.info('Runtime:'+ str(time.time() - start_time))
         done_timestamp = datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
@@ -286,8 +288,8 @@ class Sequential_Cascade_Feeder():
                      lineType)
             self.bot.node_last_casc_img=cascade_obj.output_img
 
-            # self.fps_offset = 0
-            self.fps_offset += 1
+            self.fps_offset = 0
+            # self.fps_offset += 1
             #If face found add the cumulus points
             if cascade_obj.face_bool:
                 self.face_counter += 1
