@@ -93,7 +93,7 @@ class Sequential_Cascade_Feeder():
         self.event_nr = 0
         self.base_cascade = Cascade()
         self.DEFAULT_FPS_OFFSET = 1
-        self.QUEQUE_MAX_THRESHOLD = 30
+        self.QUEQUE_MAX_THRESHOLD = 500
         self.fps_offset = self.DEFAULT_FPS_OFFSET
         self.MAX_PROCESSES = 5
         self.EVENT_FLAG = False
