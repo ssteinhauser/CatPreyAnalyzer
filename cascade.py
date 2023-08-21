@@ -180,7 +180,8 @@ class Sequential_Cascade_Feeder():
             event_str += '\n' + f_event.img_name + ' => PC_Val: ' + str('%.2f' % f_event.pc_prey_val)
 
         sender_img = event_objects[max_prey_index].output_img
-        caption = 'Cumuli: ' + str(cumuli) + ' => PREY DETECTED!' + ' 🐁🐁🐁' + event_str
+        caption = 'Decision time: ' + datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
+        caption += '\nCumuli: ' + str(cumuli) + ' => PREY DETECTED!' + ' 🐁🐁🐁' + event_str
 
         self.bot.send_img(img=sender_img, caption=caption)
         return
@@ -199,7 +200,8 @@ class Sequential_Cascade_Feeder():
             event_str += '\n' + f_event.img_name + ' => PC_Val: ' + str('%.2f' % f_event.pc_prey_val)
 
         sender_img = event_objects[min_prey_index].output_img
-        caption = 'Cumuli: ' + str(cumuli) + ' => Cat has no prey...' + ' 🐱' + event_str
+        caption = 'Decision time: ' + datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
+        caption += '\nCumuli: ' + str(cumuli) + ' => Cat has no prey...' + ' 🐱' + event_str
 
         self.bot.send_img(img=sender_img, caption=caption)
         return
@@ -215,7 +217,8 @@ class Sequential_Cascade_Feeder():
             event_str += '\n' + f_event.img_name + ' => PC_Val: ' + str('%.2f' % f_event.pc_prey_val)
         try:
             sender_img = face_events[0].output_img
-            caption = 'Cumuli: ' + str(cumuli) + " => Can't say for sure..." + ' 🤷‍♀️' + event_str + '\nMaybe use /letin?'
+            caption = 'Decision time: ' + datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%Y_%m_%d_%H-%M-%S.%f")
+            caption += '\nCumuli: ' + str(cumuli) + " => Can't say for sure..." + ' 🤷‍♀️' + event_str + '\nMaybe use /letin?'
             self.bot.send_img(img=sender_img, caption=caption)
         except Exception as e:
             log.info('Failed to extract sender_img in send_dk_message:')
