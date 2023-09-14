@@ -143,7 +143,8 @@ class CC_MobileNet_Stage():
 
 
 
-        if (int(classes[0][0]) == 17 or int(classes[0][0]) == 18):
+        # if (int(classes[0][0]) == 17 or int(classes[0][0]) == 18):
+        if int(classes[0][0]) == 17:
             return True, target_box, inference_time
 
         else:
