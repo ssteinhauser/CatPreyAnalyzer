@@ -10,6 +10,7 @@ import telegram
 from telegram.ext import Updater, CommandHandler, Filters, MessageHandler
 import xml.etree.ElementTree as ET
 from email.quoprimime import body_decode
+import traceback
 
 # for logging
 import logging.handlers
@@ -87,7 +88,7 @@ class Spec_Event_Handler():
             #self.log_to_csv(img_event_obj=single_cascade)
 
 class Sequential_Cascade_Feeder():
-    def __init__(self):
+    def __init__(self, bot):
         self.log_dir = os.path.join(os.getcwd(), 'log')
         log.info('Log Dir:'+ self.log_dir)
         self.event_nr = 0
@@ -111,7 +112,7 @@ class Sequential_Cascade_Feeder():
         self.PREY_FLAG = None
         self.NO_PREY_FLAG = None
         self.queues_cumuli_in_event = []
-        self.bot = NodeBot()
+        self.bot = bot
 
         self.processing_pool = []
         #log.info("deque")
@@ -877,6 +878,10 @@ if __name__ == '__main__':
 
     prettytime=datetime.now(tz=ZoneInfo('Europe/Zurich')).strftime("%d.%m.%Y, %H:%M:%S")
     print(prettytime+":  starting sequential cascade feeder")
-    sq_cascade = Sequential_Cascade_Feeder()
-    log.info("Sequential_Cascade_Feeder initialized")
-    sq_cascade.queque_handler()
+    bot = NodeBot()
+    try:
+        sq_cascade = Sequential_Cascade_Feeder(bot)
+        log.info("Sequential_Cascade_Feeder initialized")
+        sq_cascade.queque_handler()
+    except:
+        bot.send_text('Exception occured:\n' + traceback.format_exc())
